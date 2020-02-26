@@ -9,11 +9,11 @@ class Store(BaseModel):
     record_type = models.CharField(
         max_length=20,
         choices=STORE_CHOICES,
-        default='Store')
+        default='use')
     is_property = models.BooleanField(default=False)
     is_inflow = models.BooleanField(default=False)
     description = models.CharField(max_length=200, default='*Home expense')
-    user = models.ForeignKey(User, related_name='store', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='stores', on_delete=models.CASCADE)
 
     def get_total_in(self):
         pass

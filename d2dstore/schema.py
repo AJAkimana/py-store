@@ -11,4 +11,4 @@ class AppMutations(StoreMutation, graphene.ObjectType):
     pass
 
 
-schema = graphene.Schema(query=StoreQuery, mutation=AppMutations)
+schema = graphene.Schema(query=AppQuery, mutation=AppMutations)

@@ -1,6 +1,10 @@
 import re
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction, IntegrityError, DatabaseError, OperationalError
+from graphql import GraphQLError
+
+from .common_messages import ERROR_RESPONSES
 from .error_handler import errors
 
 
@@ -75,3 +79,44 @@ class SaveContextManager:
         field = field_value[0].replace(")", "").strip()
         value = field_value[-1].replace(")", "").strip()
         return field, value
+
+
+def get_model_object(model, column_name, column_value, **kwargs):
+    """
+    Gets model instance from the database by a crertain field.
+
+    Args:
+        model: Holds the model from which we want to query data
+        column_name: Holds the model field to query data by from the model.
+        column_value: Holds the value for the column_name.
+        kwargs : Hold optional keyword arguments.
+        message: Holds a custom error message(it's optional).
+        error: Holds a error type to raise incase it's not GraphQlError
+               (it's optional).
+
+    Returns:
+        model_instance: If the value exists or not, at checks of
+         column_name id having column_value as an int and
+         greater or equal to one, or column_name id having
+         column_value as a string, or any other column_name being
+         any name other than id.
+        error: Else expection is raised with appropriate message.
+    """
+    manager_query = kwargs.get('manager_query', model.objects)
+    try:
+        if ((column_name == "id") and isinstance(column_value, int) and
+                (column_value < 1)):
+            error_message = ERROR_RESPONSES[
+                "invalid_id"].format(column_value)
+            raise GraphQLError(error_message)
+        model_instance = manager_query.get(**{column_name: column_value})
+        return model_instance
+    except ObjectDoesNotExist:
+        message = kwargs.get('message', None)
+        error_type = kwargs.get('error_type', None)
+        label = kwargs.get('label', None)
+        if message is not None:
+            errors.custom_message(message, error_type=error_type)
+        errors.db_object_do_not_exists(
+            model.__name__, column_name, column_value, error_type=error_type,
+            label=label)

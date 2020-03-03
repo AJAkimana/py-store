@@ -1,5 +1,7 @@
 import graphene
+from django.contrib.auth.decorators import login_required
 from graphene_django import DjangoObjectType
+from django.db.models import Q
 from apps.stores.models import Store
 
 
@@ -9,7 +11,12 @@ class StoreType(DjangoObjectType):
 
 
 class StoreQuery(graphene.ObjectType):
-    stores = graphene.List(StoreType)
+    stores = graphene.List(StoreType, search=graphene.String())
 
-    def resolve_stores(self, info, **kwargs):
+    @login_required
+    def resolve_stores(self, info, search=None, **kwargs):
+        if search:
+            search_filter = (Q(amount__icontains=search) |
+                             Q(description__icontains=search))
+            return Store.objects.filter(search_filter)
         return Store.objects.all()

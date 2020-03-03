@@ -14,10 +14,9 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv(os.path.abspath('.env'))
+load_dotenv(os.path.abspath('app.env'))
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -28,8 +27,8 @@ SECRET_KEY = '^ip0-hqvisc(1vafv1qyaed^87ve%ycv3fm7lw=n)u8f6-8ik&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+DEBUG = os.getenv("DEBUG", False)
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -40,9 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'graphene_django',
     'apps.user',
-    'apps.stores',
-    'graphene_django'
+    'apps.stores'
 ]
 
 MIDDLEWARE = [
@@ -53,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
 
 ROOT_URLCONF = 'd2dstore.urls'
@@ -75,7 +75,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'd2dstore.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
@@ -87,7 +86,6 @@ DATABASES = {
         },
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -110,6 +108,10 @@ AUTH_PASSWORD_VALIDATORS = [
 GRAPHENE = {
     'SCHEMA': 'd2dstore.schema.schema',
 }
+AUTHENTICATION_BACKENDS = [
+    'graphql_jwt.backends.JSONWebTokenBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -122,7 +124,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/

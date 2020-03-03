@@ -14,7 +14,7 @@ class RegisterUser(graphene.Mutation):
     This is a mutation used to create new user
     """
     user = graphene.Field(UserType)
-    success = graphene.String()
+    message = graphene.String()
 
     class Arguments:
         email = graphene.String()
@@ -26,7 +26,7 @@ class RegisterUser(graphene.Mutation):
         new_user.set_password = kwargs.get('password')
         new_user.save()
 
-        return RegisterUser(success='Success', user=new_user)
+        return RegisterUser(message='Success', user=new_user)
 
 
 class UserMutation(graphene.ObjectType):

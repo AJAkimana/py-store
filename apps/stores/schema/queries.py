@@ -1,7 +1,8 @@
 import graphene
-from django.contrib.auth.decorators import login_required
 from graphene_django import DjangoObjectType
 from django.db.models import Q
+from graphql_jwt.decorators import login_required
+
 from apps.stores.models import Store
 
 
@@ -15,6 +16,8 @@ class StoreQuery(graphene.ObjectType):
 
     @login_required
     def resolve_stores(self, info, search=None, **kwargs):
+        # import pdb
+        # pdb.set_trace()
         if search:
             search_filter = (Q(amount__icontains=search) |
                              Q(description__icontains=search))

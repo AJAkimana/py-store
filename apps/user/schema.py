@@ -1,6 +1,11 @@
 import graphene
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
 from graphene_django import DjangoObjectType
+from graphql import GraphQLError
+from graphql_jwt.utils import jwt_payload, jwt_encode
 
+from app_utils.database import get_model_object
 from apps.user.models import User
 
 
@@ -29,5 +34,39 @@ class RegisterUser(graphene.Mutation):
         return RegisterUser(message='Success', user=new_user)
 
 
+class LoginUser(graphene.Mutation):
+    """
+    Login a user with their credentials
+
+    args:
+        password(str): user's registered password
+        email(str): user's registered email
+
+    returns:
+        message(str): success messsage confirming login
+        token(str): JWT authorization token used to validate the login
+        user(obj): 'User' object containing details of the logged in user
+    """
+    message = graphene.String()
+    token = graphene.String()
+    user = graphene.Field(UserType)
+
+    class Arguments:
+        email = graphene.String()
+        password = graphene.String()
+
+    def mutate(self, info, email, password, **kwargs):
+        user_auth = authenticate(email=email, password=password)
+        if user_auth is None:
+            raise GraphQLError('Invalid credentials')
+        user = get_model_object(User, 'email', email)
+        update_last_login(sender=User, user=user)
+        user_payload = jwt_payload(user_auth)
+        token = jwt_encode(user_payload)
+
+        return LoginUser(message='Success', token=token, user=user)
+
+
 class UserMutation(graphene.ObjectType):
     register_user = RegisterUser.Field()
+    login_user = LoginUser.Field()

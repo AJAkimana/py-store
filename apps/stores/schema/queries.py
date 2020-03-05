@@ -16,8 +16,6 @@ class StoreQuery(graphene.ObjectType):
 
     @login_required
     def resolve_stores(self, info, search=None, **kwargs):
-        # import pdb
-        # pdb.set_trace()
         if search:
             search_filter = (Q(amount__icontains=search) |
                              Q(description__icontains=search))

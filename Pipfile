@@ -13,6 +13,7 @@ django-graphql-jwt = "==0.3.0"
 mysqlclient = "==1.4.6"
 python-dotenv = "*"
 graphene = "*"
+djangorestframework = "==3.9.2"
 
 [requires]
 python_version = "3.8"

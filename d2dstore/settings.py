@@ -52,8 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'graphql_jwt.middleware.JSONWebTokenMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware'
 ]
 
 ROOT_URLCONF = 'd2dstore.urls'
@@ -108,11 +107,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 GRAPHENE = {
     'SCHEMA': 'd2dstore.schema.schema',
+    "MIDDLEWARE": [
+        "graphql_jwt.middleware.JSONWebTokenMiddleware"
+    ],
 }
 AUTHENTICATION_BACKENDS = [
     'graphql_jwt.backends.JSONWebTokenBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+AUTH_USER_MODEL = 'user.User'
 CORS_ORIGIN_WHITELIST = (
     '0.0.0.0:8000'
 )
@@ -131,5 +134,4 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-AUTH_USER_MODEL = 'user.User'
 STATIC_URL = '/static/'

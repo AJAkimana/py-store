@@ -1,5 +1,4 @@
 import graphene
-from graphene import relay
 from graphene_django import DjangoObjectType
 from django.db.models import Q, Count
 from graphql_jwt.decorators import login_required
@@ -12,14 +11,9 @@ class StoreType(DjangoObjectType):
         model = Store
 
 
-class MonthType(DjangoObjectType):
-    class Meta:
-        model = Store
-        fields = {
-            'action_date': ['exact', 'action_date__month'],
-            'action_date': ['exact', 'action_date__year']
-        }
-        interfaces = (relay.Node,)
+class MonthType(graphene.ObjectType):
+    label = graphene.String()
+    value = graphene.Int()
 
 
 class StoreQuery(graphene.AbstractType):
@@ -52,10 +46,11 @@ class StoreQuery(graphene.AbstractType):
         return Store.objects.count()
 
     @login_required
-    def resolve_monthly_store(self):
-        monthly_stores = Store.objects \
-            .values() \
-            .annotate(count=Count('pk'))
-        import pdb
-        pdb.set_trace()
-        return monthly_stores
+    def resolve_monthly_store(self, info):
+        query = """
+            SELECT id, DATE_FORMAT(action_date, '%%b, %%Y') AS label,
+            SUM(CASE WHEN is_inflow=0 THEN amount ELSE 0 END) AS value 
+            FROM stores_store GROUP BY label, year(action_date) 
+            ORDER BY action_date DESC """
+        stores = Store.objects.raw(query)
+        return stores

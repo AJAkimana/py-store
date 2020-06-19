@@ -130,3 +130,6 @@ dmypy.json
 .pyre/
 
 .idea/
+
+# Db credentials
+db.cnf

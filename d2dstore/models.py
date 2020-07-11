@@ -11,7 +11,7 @@ class BaseModel(models.Model):
         created_at: Holds date/time for when an object was created.
         updated_at: Holds date/time for last update on an object.
         deleted_at: Holds date/time for soft-deleted objects.
-        deleted_by: Holds user who soft-deleted an objects.
+        deleted_by: Holds users who soft-deleted an objects.
         objects: Return objects that have not been soft-deleted.
         all_objects: Return all objects(soft-deleted inclusive)
     """

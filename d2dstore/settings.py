@@ -40,8 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'graphene_django',
-    'apps.user',
-    'apps.stores'
+    'apps.users',
+    'apps.stores',
+    'apps.houses',
+    'apps.properties',
+    'apps.prop_details'
 ]
 
 MIDDLEWARE = [
@@ -115,7 +118,7 @@ AUTHENTICATION_BACKENDS = [
     'graphql_jwt.backends.JSONWebTokenBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-AUTH_USER_MODEL = 'user.User'
+AUTH_USER_MODEL = 'users.User'
 CORS_ORIGIN_WHITELIST = (
     '0.0.0.0:8000'
 )

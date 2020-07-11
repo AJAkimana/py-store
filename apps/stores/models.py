@@ -4,7 +4,7 @@ from django.utils.timezone import now
 
 from d2dstore.models import BaseModel
 from app_utils.constants import STORE_CHOICES
-from apps.user.models import User
+from apps.users.models import User
 
 
 class Store(BaseModel):
@@ -17,7 +17,13 @@ class Store(BaseModel):
     is_inflow = models.BooleanField(default=False)
     description = models.CharField(max_length=200, default='*Home expense')
     action_date = models.DateField(blank=False, null=False, default=now)
-    user = models.ForeignKey(User, related_name='stores', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.description
+
+    class Meta:
+        ordering = ['action_date']
 
     def get_total(self, store_type='use', is_inflow=False):
         store_filter = (Q(record_type=store_type, is_inflow=is_inflow))

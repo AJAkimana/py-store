@@ -1,3 +1,4 @@
 from django.contrib import admin
+from apps.houses.models import House
 
-# Register your models here.
+admin.site.register(House)

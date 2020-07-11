@@ -1,3 +1,4 @@
 from django.contrib import admin
+from apps.prop_details.models import PropDetails
 
-# Register your models here.
+admin.site.register(PropDetails)

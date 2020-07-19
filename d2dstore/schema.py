@@ -3,11 +3,12 @@ import graphql_jwt
 from graphql_jwt import ObtainJSONWebToken
 
 from apps.stores.schema.queries import StoreQuery
+from apps.properties.schema.queries import PropertyQuery
 from apps.stores.schema.mutations import StoreMutation
 from apps.users.schema import UserMutation
 
 
-class AppQuery(StoreQuery, graphene.ObjectType):
+class AppQuery(StoreQuery, PropertyQuery,  graphene.ObjectType):
     pass
 
 

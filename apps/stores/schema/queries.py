@@ -31,12 +31,10 @@ class StoreQuery(graphene.AbstractType):
             return Store.objects.filter(search_filter)
         return Store.objects.filter(record_type=store_type)
 
-    @staticmethod
     @login_required
     def resolve_total_inflow(self, info, store_type='use', **kwargs):
         return Store.get_total(Store, store_type=store_type, is_inflow=True)
 
-    @staticmethod
     @login_required
     def resolve_total_outflow(self, info, store_type='use', **kwargs):
         return Store.get_total(Store, store_type=store_type, is_inflow=False)
@@ -49,7 +47,7 @@ class StoreQuery(graphene.AbstractType):
     def resolve_monthly_store(self, info):
         query = """
             SELECT id, DATE_FORMAT(action_date, '%%b, %%Y') AS label,
-            SUM(CASE WHEN is_inflow=0 THEN amount ELSE 0 END) AS value 
+            SUM(CASE WHEN is_inflow=1 THEN amount ELSE 0 END) AS value 
             FROM stores_store GROUP BY label, year(action_date) 
             ORDER BY action_date DESC """
         stores = Store.objects.raw(query)

@@ -1,5 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
+from django.db.models import Q
 from apps.properties.models import Property
 from graphql_jwt.decorators import login_required
 
@@ -14,4 +15,7 @@ class PropertyQuery(graphene.AbstractType):
 
 	@login_required
 	def resolve_properties(self, info, search=None, **kwargs):
-		return Property.objects()
+		if search:
+			search_filter = (Q(name__icontains=search))
+			return Property.objects.filter(search_filter)
+		return Property.objects.all()

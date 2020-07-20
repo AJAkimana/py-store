@@ -17,7 +17,7 @@ class Store(BaseModel):
     is_inflow = models.BooleanField(default=False)
     description = models.CharField(max_length=200, default='*Home expense')
     action_date = models.DateField(blank=False, null=False, default=now)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='stores', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.description
@@ -25,8 +25,8 @@ class Store(BaseModel):
     class Meta:
         ordering = ['action_date']
 
-    def get_total(self, store_type='use', is_inflow=False):
-        store_filter = (Q(record_type=store_type, is_inflow=is_inflow))
+    def get_total(self, user=None, store_type='use', is_inflow=False):
+        store_filter = (Q(user=user, record_type=store_type, is_inflow=is_inflow))
         total = sum([store.amount for store in self.objects.filter(store_filter)])
         return total
 

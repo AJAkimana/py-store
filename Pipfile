@@ -16,6 +16,7 @@ python-dotenv = "*"
 graphene = "*"
 djangorestframework = "==3.9.2"
 pylint = "*"
+django-cors-headers = "*"
 
 [requires]
 python_version = "3.8"

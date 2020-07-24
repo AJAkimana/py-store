@@ -39,15 +39,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'graphene_django',
     'apps.users',
     'apps.stores',
     'apps.houses',
-    'apps.properties',
-    'apps.prop_details'
+    'apps.properties'
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -120,7 +121,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 AUTH_USER_MODEL = 'users.User'
 CORS_ORIGIN_WHITELIST = (
-    '0.0.0.0:8000'
+    'http://localhost:8000',
+    'http://localhost:3000'
 )
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/

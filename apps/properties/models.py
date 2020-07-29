@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from app_utils.constants import AMOUNT_TYPES
 from d2dstore.models import BaseModel
 from apps.users.models import User
@@ -15,6 +16,11 @@ class Property(BaseModel):
 
 	class Meta:
 		ordering = ['name']
+		
+	def get_total_price(self, user=None):
+		property_filter = Q(owner=user)
+		total = sum([property.price for property in self.objects.filter(property_filter)])
+		return total
 
 
 class PropDetail(BaseModel):

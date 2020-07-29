@@ -45,7 +45,7 @@ class LoginUser(graphene.Mutation):
     returns:
         message(str): success messsage confirming login
         token(str): JWT authorization token used to validate the login
-        users(obj): 'User' object containing details of the logged in users
+        user(obj): 'User' object containing details of the logged in users
     """
     message = graphene.String()
     token = graphene.String()

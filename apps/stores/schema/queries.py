@@ -1,8 +1,9 @@
 import graphene
+from graphene import ObjectType
 from graphene_django import DjangoObjectType
 from django.db.models import Q
 from graphql_jwt.decorators import login_required
-
+from app_utils.helpers import paginate_data, PAGINATION_DEFAULT
 from apps.stores.models import Store
 from apps.users.models import User
 
@@ -17,8 +18,18 @@ class MonthType(graphene.ObjectType):
 	value = graphene.Int()
 
 
+class PaginatorType(ObjectType):
+	page_data = graphene.List(StoreType)
+	num_pages = graphene.Int()
+	total_count = graphene.Int()
+
+
 class StoreQuery(graphene.AbstractType):
-	stores = graphene.List(StoreType, search=graphene.String(), store_type=graphene.String())
+	stores = graphene.Field(PaginatorType,
+	                        search=graphene.String(),
+	                        page_count=graphene.Int(),
+	                        page_number=graphene.Int(),
+	                        store_type=graphene.String())
 	total_inflow = graphene.Int(store_type=graphene.String())
 	total_outflow = graphene.Int(store_type=graphene.String())
 	store_count = graphene.Int()
@@ -26,13 +37,19 @@ class StoreQuery(graphene.AbstractType):
 	
 	@login_required
 	def resolve_stores(self, info, search=None, store_type='use', **kwargs):
+		page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
+		page_number = kwargs.get('page_number', PAGINATION_DEFAULT['page_number'])
 		user = info.context.user
-		stores = User.get_user_stores(user)
+		stores = User.get_user_stores(user).filter(record_type=store_type)
 		if search:
-			search_filter = (Q(amount__icontains=search, record_type=store_type) |
-			                 Q(description__icontains=search, record_type=store_type))
-			return stores.filter(search_filter)
-		return stores.filter(record_type=store_type)
+			search_filter = (
+					Q(amount__icontains=search) | Q(description__icontains=search)
+			)
+			stores = stores.filter(search_filter)
+		paginated_result = paginate_data(stores, page_count, page_number)
+		# import pdb
+		# pdb.set_trace()
+		return paginated_result
 	
 	@login_required
 	def resolve_total_inflow(self, info, store_type='use', **kwargs):

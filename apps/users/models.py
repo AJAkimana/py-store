@@ -11,6 +11,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	last_name = models.CharField(max_length=50, blank=False)
 	middle_name = models.CharField(max_length=50)
 	user_name = models.CharField(max_length=50, unique=True, blank=False)
+	phone = models.CharField(max_length=50, blank=True)
 	email = models.EmailField(_('email address'), unique=True)
 	is_staff = models.BooleanField(default=False)
 	is_active = models.BooleanField(default=True)
@@ -24,7 +25,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	objects = UserManager()
 
 	def __str__(self):
-		return self.email
+		return f'{self.first_name} {self.last_name}'
 
 	def get_previous_passwords(self):
 		return self.previous_passwords.split(',')

@@ -8,6 +8,8 @@ from apps.users.models import User
 class Property(BaseModel):
 	name = models.CharField(blank=False, max_length=50)
 	price = models.FloatField(blank=False)
+	description = models.CharField(max_length=255, default='Asset')
+	cover_image = models.CharField(max_length=255, default='/images/products/product_1.png')
 	owner = models.ForeignKey(User, related_name='properties', on_delete=models.CASCADE)
 	is_active = models.BooleanField(default=True)
 
@@ -27,7 +29,7 @@ class PropDetail(BaseModel):
 	title = models.CharField(max_length=255, blank=False)
 	amount = models.FloatField(blank=False)
 	type = models.CharField(choices=AMOUNT_TYPES, default='out', blank=False, max_length=10)
-	property = models.ForeignKey(Property, on_delete=models.CASCADE)
+	property = models.ForeignKey(Property, related_name='prop_details', on_delete=models.CASCADE)
 
 	def __str__(self):
 		return self.title

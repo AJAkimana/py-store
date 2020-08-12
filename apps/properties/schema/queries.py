@@ -2,14 +2,28 @@ import graphene
 from graphene import ObjectType
 from graphene_django import DjangoObjectType
 from django.db.models import Q
-from apps.properties.models import Property
+from apps.properties.models import Property, PropDetail
 from apps.users.models import User
 from graphql_jwt.decorators import login_required
 
 
+class DetailType(DjangoObjectType):
+	class Meta:
+		model = PropDetail
+
+
 class PropertyType(DjangoObjectType):
+	details = graphene.List(DetailType)
+	details_counts = graphene.Int()
+	
 	class Meta:
 		model = Property
+	
+	def resolve_details(self, info, **kwargs):
+		return self.prop_details.all()
+	
+	def resolve_details_counts(self, info, **kwargs):
+		return self.prop_details.count()
 
 
 class PropertyDetailType(ObjectType):
@@ -17,7 +31,7 @@ class PropertyDetailType(ObjectType):
 	total_amount = graphene.Int()
 
 
-class PropertyQuery(graphene.AbstractType):
+class PropertyQuery(graphene.ObjectType):
 	properties = graphene.List(PropertyType, search=graphene.String())
 	properties_detail = graphene.Field(PropertyDetailType)
 	

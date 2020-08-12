@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.db import connection
 from graphql_jwt.decorators import login_required
 from app_utils.helpers import paginate_data, PAGINATION_DEFAULT
+from app_utils.model_types import PaginatorType
 from apps.stores.models import Store
 from apps.users.models import User
 
@@ -25,15 +26,9 @@ class StoreRatioType(graphene.ObjectType):
 	percent = graphene.Float()
 
 
-class PaginatorType(ObjectType):
-	page_data = graphene.List(StoreType)
-	num_pages = graphene.Int()
-	total_count = graphene.Int()
-
-
 class StoreQuery(graphene.AbstractType):
 	stores = graphene.Field(
-		PaginatorType,
+		PaginatorType(StoreType),
 		search=graphene.String(),
 		page_count=graphene.Int(),
 		page_number=graphene.Int(),

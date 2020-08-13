@@ -1,34 +1,18 @@
 import graphene
-from graphene import ObjectType
-from graphene_django import DjangoObjectType
+from graphene import AbstractType
 from django.db.models import Q
 from django.db import connection
 from graphql_jwt.decorators import login_required
 from app_utils.helpers import paginate_data, PAGINATION_DEFAULT
-from app_utils.model_types import PaginatorType
+from app_utils.model_types.store import StorePaginatorType,\
+	MonthType, StoreRatioType
 from apps.stores.models import Store
 from apps.users.models import User
 
 
-class StoreType(DjangoObjectType):
-	class Meta:
-		model = Store
-
-
-class MonthType(graphene.ObjectType):
-	label = graphene.String()
-	value = graphene.Int()
-
-
-class StoreRatioType(graphene.ObjectType):
-	inflow = graphene.Int()
-	outflow = graphene.Int()
-	percent = graphene.Float()
-
-
-class StoreQuery(graphene.AbstractType):
+class StoreQuery(AbstractType):
 	stores = graphene.Field(
-		PaginatorType(StoreType),
+		StorePaginatorType,
 		search=graphene.String(),
 		page_count=graphene.Int(),
 		page_number=graphene.Int(),
@@ -52,8 +36,6 @@ class StoreQuery(graphene.AbstractType):
 			)
 			stores = stores.filter(search_filter)
 		paginated_result = paginate_data(stores, page_count, page_number)
-		# import pdb
-		# pdb.set_trace()
 		return paginated_result
 	
 	@login_required

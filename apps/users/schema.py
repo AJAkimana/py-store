@@ -2,17 +2,11 @@ import graphene
 from django.contrib.auth import authenticate
 from graphql_jwt.decorators import login_required
 from django.contrib.auth.models import update_last_login
-from graphene_django import DjangoObjectType
 from graphql import GraphQLError
 from graphql_jwt.utils import jwt_payload, jwt_encode
-
 from app_utils.database import get_model_object
 from apps.users.models import User
-
-
-class UserType(DjangoObjectType):
-    class Meta:
-        model = User
+from app_utils.model_types.user import UserType
 
 
 class RegisterUser(graphene.Mutation):

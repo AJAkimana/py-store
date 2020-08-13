@@ -4,7 +4,7 @@ from graphql_jwt.decorators import login_required
 
 from app_utils.constants import STORE_CHOICES
 from apps.stores.models import Store
-from apps.stores.schema.queries import StoreType
+from app_utils.model_types.store import StoreType
 
 
 class CreateStore(graphene.Mutation):

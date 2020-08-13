@@ -13,8 +13,7 @@ class PropertyQuery(graphene.ObjectType):
 		PropPaginatorType,
 		search=graphene.String(),
 		page_count=graphene.Int(),
-		page_number=graphene.Int(),
-		store_type=graphene.String())
+		page_number=graphene.Int())
 	properties_detail = graphene.Field(PropertyDetailType)
 	
 	@login_required

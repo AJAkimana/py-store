@@ -1,5 +1,4 @@
-import graphene
-from graphene import ObjectType
+from graphene import ObjectType, List, Int
 from graphene_django import DjangoObjectType
 from apps.properties.models import Property, PropDetail
 
@@ -10,8 +9,8 @@ class DetailType(DjangoObjectType):
 
 
 class PropertyType(DjangoObjectType):
-	details = graphene.List(DetailType)
-	details_counts = graphene.Int()
+	details = List(DetailType)
+	details_counts = Int()
 	
 	class Meta:
 		model = Property
@@ -24,5 +23,11 @@ class PropertyType(DjangoObjectType):
 
 
 class PropertyDetailType(ObjectType):
-	count = graphene.Int()
-	total_amount = graphene.Int()
+	count = Int()
+	total_amount = Int()
+	
+
+class PropPaginatorType(ObjectType):
+	page_data = List(PropertyType)
+	num_pages = Int()
+	total_count = Int()

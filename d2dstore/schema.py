@@ -5,7 +5,8 @@ from graphql_jwt import ObtainJSONWebToken
 from apps.stores.schema.queries import StoreQuery
 from apps.properties.schema.queries import PropertyQuery
 from apps.stores.schema.mutations import StoreMutation
-from apps.users.schema import UserMutation, UserQuery
+from apps.users.schema.mutations import UserMutation
+from apps.users.schema.queries import UserQuery
 
 
 class AppQuery(UserQuery, StoreQuery, PropertyQuery,  graphene.ObjectType):

@@ -1,6 +1,5 @@
 import graphene
 from django.contrib.auth import authenticate
-from graphql_jwt.decorators import login_required
 from django.contrib.auth.models import update_last_login
 from graphql import GraphQLError
 from graphql_jwt.utils import jwt_payload, jwt_encode
@@ -65,11 +64,3 @@ class LoginUser(graphene.Mutation):
 class UserMutation(graphene.ObjectType):
     register_user = RegisterUser.Field()
     login_user = LoginUser.Field()
-
-
-class UserQuery(graphene.AbstractType):
-    me = graphene.Field(UserType)
-    
-    @login_required
-    def resolve_me(self, info, **kwargs):
-        return info.context.user

@@ -9,6 +9,10 @@ class UserType(DjangoObjectType):
         exclude_fields = ('password', 'previous_passwords')
 
 
+class WelcomeType(graphene.ObjectType):
+    message = graphene.String()
+
+
 class PaginatorUserType(graphene.ObjectType):
     page_data = graphene.List(UserType)
     num_pages = graphene.Int()

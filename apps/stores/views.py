@@ -1,3 +1,10 @@
 from django.shortcuts import render
+from rest_framework import viewsets
+from apps.stores.models import Store
+from apps.stores.serializers import StoreSerializer
 
-# Create your views here.
+
+class StoreView(viewsets.ModelViewSet):
+	queryset = Store.objects.all()
+	serializer_class = StoreSerializer
+

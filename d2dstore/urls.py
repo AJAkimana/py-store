@@ -17,9 +17,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
+from rest_framework.documentation import include_docs_urls
+
+core_schema_view = include_docs_urls(title='D2DStore API')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('d2dstore/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
-    path('', include('apps.stores.urls'))
+    path('stores/', include('apps.stores.urls')),
+    path('d2dstore/schema/', core_schema_view)
 ]

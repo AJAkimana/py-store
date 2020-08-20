@@ -1,5 +1,6 @@
 import graphene
 from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import update_last_login
 from graphql import GraphQLError
 from graphql_jwt.utils import jwt_payload, jwt_encode
@@ -39,10 +40,12 @@ class LoginUser(graphene.Mutation):
     returns:
         message(str): success messsage confirming login
         token(str): JWT authorization token used to validate the login
+        rest_token(str): JWT token used to validate REST endpoint access
         user(obj): 'User' object containing details of the logged in users
     """
     message = graphene.String()
     token = graphene.String()
+    rest_token = graphene.String()
     user = graphene.Field(UserType)
 
     class Arguments:
@@ -57,8 +60,11 @@ class LoginUser(graphene.Mutation):
         update_last_login(sender=User, user=user)
         user_payload = jwt_payload(user_auth)
         token = jwt_encode(user_payload)
+        rest_payload = Token.objects.get_or_create(user=user_auth)
+        rest_token = rest_payload[0]
 
-        return LoginUser(message='Success', token=token, user=user)
+        return LoginUser(message='Success', token=token,
+                         rest_token=rest_token, user=user)
 
 
 class UserMutation(graphene.ObjectType):

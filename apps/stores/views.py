@@ -10,6 +10,7 @@ from rest_framework.authentication import SessionAuthentication,\
 from rest_framework.views import APIView
 from apps.stores.models import Store
 from apps.stores.serializers import StoreSerializer
+from app_utils.helpers import server_response
 
 
 class StoreView(viewsets.ModelViewSet):
@@ -24,11 +25,15 @@ class MigrateStoreView(APIView):
 	parser_classes = (JSONParser, )
 	
 	def post(self, request):
+		saved = 0
+		not_saved = 0
 		for store in request.data['stores']:
-			print(store)
-		response = {
-			"message": "Request accepted",
-			"user": request.data,
-			"status": status.HTTP_200_OK
-		}
-		return Response(response, status.HTTP_200_OK)
+			serializer = StoreSerializer(data=store)
+			if serializer.is_valid():
+				serializer.save(user=request.user)
+				saved += 1
+			else:
+				not_saved += 1
+		message = f'{saved} stores saved, {not_saved} remained'
+		
+		return server_response(200, message)

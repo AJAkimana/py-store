@@ -1,4 +1,5 @@
 from django.core.paginator import Paginator
+from rest_framework.response import Response
 
 PAGINATION_DEFAULT = {
 	"page_number": 1,
@@ -26,3 +27,13 @@ def paginate_data(data_set, page_count, page_number):
 		'total_count': total_count
 	}
 	return result
+
+
+def server_response(status_code, message, data=None):
+	message_type = 'error' if status_code >= 400 else 'message'
+	response_content = {
+		'status': status_code,
+		message_type: message,
+		data: data
+	}
+	return Response(response_content, status_code)

@@ -20,7 +20,6 @@ class CreateStore(graphene.Mutation):
 		saved = 0
 		not_saved = 0
 		stores = kwargs['stores']
-		print(f'{stores}  ==========')
 		for store in stores:
 			store_type = [item for item in STORE_CHOICES if item[0] == store['record_type']]
 			if not store_type:

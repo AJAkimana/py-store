@@ -46,7 +46,7 @@ class StoreQuery(AbstractType):
 	@login_required
 	def resolve_total_outflow(self, info, store_type='use', **kwargs):
 		user = info.context.user
-		return Store.get_total(Store, user=user, store_type=store_type, is_inflow=False)
+		return Store.get_total(Store, user=user, stortruee_type=store_type, is_inflow=False)
 	
 	@login_required
 	def resolve_store_count(self, info):

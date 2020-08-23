@@ -4,10 +4,36 @@ from graphql_jwt.decorators import login_required
 
 from app_utils.constants import STORE_CHOICES
 from apps.stores.models import Store
-from app_utils.model_types.store import StoreInputType
+from app_utils.model_types.store import StoreInputType, StoreType
 
 
 class CreateStore(graphene.Mutation):
+	message = graphene.String()
+	store = graphene.Field(StoreType)
+	
+	class Arguments:
+		amount = graphene.Float(required=True)
+		record_type = graphene.String(required=True)
+		is_property = graphene.Boolean(required=True)
+		is_inflow = graphene.Boolean(required=True)
+		action_date = graphene.Date(required=True)
+		description = graphene.String(required=True)
+	
+	@login_required
+	def mutate(self, info, **kwargs):
+		store_type = [item for item in STORE_CHOICES if item[0] == kwargs['record_type']]
+		if not store_type:
+			raise GraphQLError('Invalid store type')
+		kwargs['user_id'] = info.context.user.id
+		new_store = Store(**kwargs)
+		new_store.save()
+		
+		return CreateStore(
+			message="Successfully saved",
+			store=new_store)
+	
+	
+class CreateManyStores(graphene.Mutation):
 	message = graphene.String()
 	total_saved = graphene.Int()
 	total_not_saved = graphene.Int()
@@ -35,7 +61,7 @@ class CreateStore(graphene.Mutation):
 			else:
 				not_saved += 1
 		
-		return CreateStore(
+		return CreateManyStores(
 			message="stores successfully saved",
 			total_saved=saved,
 			total_not_saved=not_saved)
@@ -43,3 +69,4 @@ class CreateStore(graphene.Mutation):
 
 class StoreMutation(graphene.ObjectType):
 	create_store = CreateStore.Field()
+	create_many_stores = CreateManyStores.Field()

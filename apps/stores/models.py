@@ -23,10 +23,4 @@ class Store(BaseModel):
         return self.description
 
     class Meta:
-        ordering = ['action_date']
-
-    def get_total(self, user=None, store_type='use', is_inflow=False):
-        store_filter = (Q(user=user, record_type=store_type, is_inflow=is_inflow))
-        total = sum([store.amount for store in self.objects.filter(store_filter)])
-        return total
-
+        ordering = ['-action_date']

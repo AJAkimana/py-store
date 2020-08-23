@@ -1,7 +1,6 @@
 import graphene
 from graphene import AbstractType
 from django.db.models import Q
-from django.db import connection
 from graphql_jwt.decorators import login_required
 from app_utils.helpers import paginate_data, PAGINATION_DEFAULT
 from app_utils.model_types.store import StorePaginatorType,\
@@ -22,7 +21,7 @@ class StoreQuery(AbstractType):
 	total_outflow = graphene.Int(store_type=graphene.String())
 	store_count = graphene.Int()
 	monthly_store = graphene.List(MonthType)
-	store_ratio = graphene.Field(StoreRatioType)
+	store_aggregate = graphene.Field(StoreRatioType, store_type=graphene.String())
 	
 	@login_required
 	def resolve_stores(self, info, search=None, store_type='use', **kwargs):
@@ -41,12 +40,12 @@ class StoreQuery(AbstractType):
 	@login_required
 	def resolve_total_inflow(self, info, store_type='use', **kwargs):
 		user = info.context.user
-		return Store.get_total(Store, user=user, store_type=store_type, is_inflow=True)
+		return User.get_store_total_amount(user, store_type)
 	
 	@login_required
 	def resolve_total_outflow(self, info, store_type='use', **kwargs):
 		user = info.context.user
-		return Store.get_total(Store, user=user, stortruee_type=store_type, is_inflow=False)
+		return User.get_store_total_amount(user, store_type, False)
 	
 	@login_required
 	def resolve_store_count(self, info):
@@ -67,20 +66,8 @@ class StoreQuery(AbstractType):
 		return stores
 	
 	@login_required
-	def resolve_store_ratio(self, info, **kwargs):
+	def resolve_store_aggregate(self, info, store_type='use', **kwargs):
 		user = info.context.user
-		percent = 0
-		query = \
-			"""
-			SELECT SUM( CASE WHEN is_inflow=1 THEN amount END ) AS inflow,
-			SUM( CASE WHEN is_inflow=0 THEN amount END ) AS outflow
-			FROM stores_store WHERE user_id=%s AND is_property=0
-			"""
-		with connection.cursor() as cursor:
-			cursor.execute(query, [user.id])
-			result = cursor.fetchone()
-		
-		if result[0] != 0:
-			percent = (result[0] / result[1]) * 100
-		record = {'inflow': result[0], 'outflow': result[1], 'percent': round(percent, 2)}
-		return record
+		aggregate = User.get_store_aggregate(user, store_type)
+
+		return aggregate

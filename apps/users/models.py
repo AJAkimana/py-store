@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.utils.translation import gettext_lazy as _
@@ -33,6 +34,21 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 	def get_user_stores(self):
 		return self.stores.all()
-
+	
+	def get_store_total_amount(self, store_type='use', is_inflow=True):
+		store_filter = (Q(record_type=store_type, is_inflow=is_inflow))
+		total = sum([store.amount for store in self.stores.filter(store_filter)])
+		return total
+	
+	def get_store_aggregate(self, store_type='use'):
+		percent = 0
+		inflow = self.get_store_total_amount(store_type=store_type)
+		outflow = self.get_store_total_amount(store_type=store_type, is_inflow=False)
+		if inflow != 0:
+			percent = (outflow / inflow) * 100
+		
+		record = {'inflow': inflow, 'outflow': outflow, 'percent': round(percent, 2)}
+		return record
+		
 	def get_user_properties(self):
 		return self.properties.all()

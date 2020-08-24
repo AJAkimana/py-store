@@ -22,9 +22,16 @@ class CreateStore(graphene.Mutation):
 	@login_required
 	def mutate(self, info, **kwargs):
 		store_type = [item for item in STORE_CHOICES if item[0] == kwargs['record_type']]
+		user = info.context.user
 		if not store_type:
 			raise GraphQLError('Invalid store type')
-		kwargs['user_id'] = info.context.user.id
+		has_saved = Store.objects.filter(
+			action_date=kwargs['action_date'],
+			description=kwargs['description'],
+			user=user).first()
+		if has_saved:
+			raise GraphQLError('You have created this record')
+		kwargs['user_id'] = user.id
 		new_store = Store(**kwargs)
 		new_store.save()
 		

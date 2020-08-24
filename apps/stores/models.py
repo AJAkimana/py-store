@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import Q
 from django.utils.timezone import now
 
 from d2dstore.models import BaseModel
@@ -24,3 +23,4 @@ class Store(BaseModel):
 
     class Meta:
         ordering = ['-action_date']
+        unique_together = ['description', 'action_date', 'user']

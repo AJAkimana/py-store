@@ -52,3 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 		
 	def get_user_properties(self):
 		return self.properties.all()
+	
+	def get_properties_total_value(self):
+		total = sum([prop.price for prop in self.properties.all()])
+		return total

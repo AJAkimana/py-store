@@ -32,5 +32,5 @@ class PropertyQuery(graphene.ObjectType):
 	def resolve_properties_detail(self, info, **kwargs):
 		user = info.context.user
 		total_count = User.get_user_properties(user).count()
-		total_value = Property.get_total_price(Property, user=user)
+		total_value = User.get_store_total_amount(user)
 		return {'count': total_count, 'total_amount': total_value}

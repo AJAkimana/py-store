@@ -1,4 +1,4 @@
-from graphene import ObjectType, List, Int
+from graphene import ObjectType, List, Int, types
 from graphene_django import DjangoObjectType
 from apps.properties.models import Property, PropDetail
 
@@ -31,3 +31,9 @@ class PropPaginatorType(ObjectType):
 	page_data = List(PropertyType)
 	num_pages = Int()
 	total_count = Int()
+
+
+class MsgSerializer(types.scalars.Scalar):
+	@staticmethod
+	def serialize(dt):
+		return dt

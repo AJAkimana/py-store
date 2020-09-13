@@ -37,3 +37,10 @@ def server_response(status_code, message, data=None):
 		data: data
 	}
 	return Response(response_content, status_code)
+
+
+def get_errors(errors):
+	messages = []
+	for key, val in errors.items():
+		messages.append(f'{key}: {val[0]}')
+	return messages[0]

@@ -64,7 +64,7 @@ ROOT_URLCONF = 'd2dstore.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'frontend')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -84,10 +84,17 @@ WSGI_APPLICATION = 'd2dstore.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS': {
-            'read_default_file': os.getenv('MYSQL_CONFIG'),
-        },
+        # 'ENGINE': 'django.db.backends.mysql',
+        # 'OPTIONS': {
+        #     'read_default_file': os.getenv('MYSQL_CONFIG'),
+        # },
+
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.getenv("DB_NAME", ''),
+        'USER': os.getenv("DB_USER", ''),
+        'PASSWORD': os.getenv("DB_PASSWORD", ''),
+        'HOST': os.getenv("DB_HOST", '127.0.0.1'),
+        'PORT': os.getenv("DB_PORT", '5432'),
     }
 }
 
@@ -153,3 +160,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 STATIC_URL = '/static/'
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'frontend', "build", "static"),
+)

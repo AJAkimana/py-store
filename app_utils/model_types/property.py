@@ -1,4 +1,4 @@
-from graphene import ObjectType, List, Int, types
+import graphene
 from graphene_django import DjangoObjectType
 from apps.properties.models import Property, PropDetail
 
@@ -9,31 +9,27 @@ class DetailType(DjangoObjectType):
 
 
 class PropertyType(DjangoObjectType):
-	details = List(DetailType)
-	details_counts = Int()
+	details_counts = graphene.Int()
 	
 	class Meta:
 		model = Property
-	
-	def resolve_details(self, info, **kwargs):
-		return self.prop_details.all()
 	
 	def resolve_details_counts(self, info, **kwargs):
 		return self.prop_details.count()
 
 
-class PropertyDetailType(ObjectType):
-	count = Int()
-	total_amount = Int()
+class PropertyDetailType(graphene.ObjectType):
+	count = graphene.Int()
+	total_amount = graphene.Int()
 	
 
-class PropPaginatorType(ObjectType):
-	page_data = List(PropertyType)
-	num_pages = Int()
-	total_count = Int()
+class PropPaginatorType(graphene.ObjectType):
+	page_data = graphene.List(PropertyType)
+	num_pages = graphene.Int()
+	total_count = graphene.Int()
 
 
-class MsgSerializer(types.scalars.Scalar):
+class MsgSerializer(graphene.types.scalars.Scalar):
 	@staticmethod
 	def serialize(dt):
 		return dt

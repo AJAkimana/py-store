@@ -59,10 +59,12 @@ class StoreQuery(AbstractType):
 			f"""
 			SELECT id, DATE_FORMAT(action_date, '%%b, %%Y') AS label,
 			SUM(CASE WHEN is_inflow=0 THEN amount ELSE 0 END) AS value
-			FROM stores_store WHERE user_id={user.id}  GROUP BY label, year(action_date)
+			FROM stores_store WHERE user_id='{user.id}'  GROUP BY label, year(action_date)
 			ORDER BY action_date DESC
 			"""
 		stores = Store.objects.raw(query)
+		# import pdb
+		# pdb.set_trace()
 		return stores
 	
 	@login_required

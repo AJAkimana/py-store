@@ -1,11 +1,11 @@
 import graphene
+from django.db import connection
 from graphene import AbstractType
 from django.db.models import Q
 from graphql_jwt.decorators import login_required
-from app_utils.helpers import paginate_data, PAGINATION_DEFAULT
-from app_utils.model_types.store import StorePaginatorType,\
+from app_utils.helpers import paginate_data, PAGINATION_DEFAULT, dict_fetchall
+from app_utils.model_types.store import StorePaginatorType, \
 	MonthType, StoreRatioType
-from apps.stores.models import Store
 from apps.users.models import User
 
 
@@ -20,7 +20,7 @@ class StoreQuery(AbstractType):
 	total_inflow = graphene.Int(store_type=graphene.String())
 	total_outflow = graphene.Int(store_type=graphene.String())
 	store_count = graphene.Int()
-	monthly_store = graphene.List(MonthType)
+	monthly_store = graphene.List(MonthType, is_inflow=graphene.Boolean())
 	store_aggregate = graphene.Field(StoreRatioType, store_type=graphene.String())
 	
 	@login_required
@@ -53,23 +53,35 @@ class StoreQuery(AbstractType):
 		return User.get_user_stores(user).count()
 	
 	@login_required
-	def resolve_monthly_store(self, info):
+	def resolve_monthly_store(self, info, is_inflow=False):
 		user = info.context.user
-		query = \
+		pg_query = \
+			f"""
+			SELECT to_char(date_trunc('month', action_date), 'Mon, YYYY') AS label,
+			SUM(amount) AS value
+			FROM stores_store WHERE user_id='{user.id}' AND is_inflow={is_inflow}
+			GROUP BY date_trunc('month', action_date)
+			ORDER BY date_trunc('month', action_date) DESC;
+			"""
+		mysql_query = \
 			f"""
 			SELECT id, DATE_FORMAT(action_date, '%%b, %%Y') AS label,
-			SUM(CASE WHEN is_inflow=0 THEN amount ELSE 0 END) AS value
-			FROM stores_store WHERE user_id='{user.id}'  GROUP BY label, year(action_date)
+			SUM(amount) AS value
+			FROM stores_store WHERE user_id='{user.id}' AND is_inflow={is_inflow}
+			GROUP BY label, year(action_date)
 			ORDER BY action_date DESC
 			"""
-		stores = Store.objects.raw(query)
-		# import pdb
-		# pdb.set_trace()
+		query = pg_query if connection.vendor == 'postgresql' else mysql_query
+
+		with connection.cursor() as cursor:
+			cursor.execute(query)
+			stores = dict_fetchall(cursor)
+
 		return stores
 	
 	@login_required
 	def resolve_store_aggregate(self, info, store_type='use', **kwargs):
 		user = info.context.user
 		aggregate = User.get_store_aggregate(user, store_type)
-
+		
 		return aggregate

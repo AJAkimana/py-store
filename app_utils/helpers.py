@@ -44,3 +44,12 @@ def get_errors(errors):
 	for key, val in errors.items():
 		messages.append(f'{key}: {val[0]}')
 	return messages[0]
+
+
+def dict_fetchall(cursor):
+	"""Return all rows from a cursor as a dict"""
+	columns = [col[0] for col in cursor.description]
+	return [
+		dict(zip(columns, row))
+		for row in cursor.fetchall()
+	]

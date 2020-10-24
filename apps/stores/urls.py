@@ -6,6 +6,6 @@ router = routers.DefaultRouter()
 router.register('', StoreView)
 
 urlpatterns = [
-    path('stores', include(router.urls)),
+    path('', include(router.urls)),
     path('migration', MigrateStoreView.as_view())
 ]

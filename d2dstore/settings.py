@@ -26,7 +26,7 @@ SECRET_KEY = os.getenv("SECRET")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", False)
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['.akimanaja.com', '165.227.5.239', 'localhost']
 
 # Application definition
 
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'graphene_django',
+    'api',
     'apps.users',
     'apps.stores',
     'apps.houses',
@@ -163,3 +164,4 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'frontend', "build", "static"),
 )
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')

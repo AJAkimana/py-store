@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "==2.5.3"
+gunicorn = "==20.0.4"
 
 [packages]
 django = "==2.2.13"
@@ -18,6 +19,7 @@ djangorestframework = "==3.9.2"
 django-cors-headers = "==3.4.0"
 coreapi = "==2.3.3"
 psycopg2 = "==2.8.6"
+gunicorn = "==20.0.4"
 
 [requires]
 python_version = "3.8"

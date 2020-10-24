@@ -133,7 +133,7 @@ dmypy.json
 .idea/
 
 # Db credentials
-db.cnf
+db.c
 
 #Remove static
 static/

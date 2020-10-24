@@ -134,3 +134,6 @@ dmypy.json
 
 # Db credentials
 db.cnf
+
+#Remove static
+static/

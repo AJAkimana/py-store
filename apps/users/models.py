@@ -29,7 +29,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	objects = UserManager()
 
 	def __str__(self):
-		return f'{self.first_name} {self.last_name}'
+		return f'Email:{self.email}, names: {self.first_name} {self.last_name}'
 
 	def get_previous_passwords(self):
 		return self.previous_passwords.split(',')

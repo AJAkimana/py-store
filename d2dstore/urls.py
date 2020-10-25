@@ -18,5 +18,5 @@ from d2dstore.views import index
 
 urlpatterns = [
     path('api/', include('api.urls')),
-    re_path(r'^(?:.*)/?$', index, name='index'),
+    # re_path(r'^(?:.*)/?$', index, name='index'),
 ]

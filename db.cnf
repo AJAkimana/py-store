@@ -1,6 +1,0 @@
-# my.cnf
-[client]
-database = py_store_db
-user = root
-password = giraict8
-default-character-set = utf8

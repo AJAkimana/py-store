@@ -18,7 +18,7 @@ class StoreView(viewsets.ModelViewSet):
 
 
 class MigrateStoreView(APIView):
-	authentication_classes = [SessionAuthentication, TokenAuthentication]
+	authentication_classes = [TokenAuthentication]
 	permission_classes = [IsAuthenticated]
 	renderer_classes = [JSONRenderer]
 	parser_classes = (JSONParser,)

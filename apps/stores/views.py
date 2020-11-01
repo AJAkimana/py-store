@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from apps.stores.models import Store
 from apps.properties.serializers import PropDetailSerializer
 from apps.stores.serializers import StoreSerializer
-from app_utils.helpers import server_response
+from app_utils.helpers import server_response, get_errors
 
 
 class StoreView(viewsets.ModelViewSet):
@@ -53,6 +53,7 @@ class MigrateStoreView(APIView):
 						prop_not_saved += 1
 				saved += 1
 			else:
+				print(get_errors(serializer.errors))
 				not_saved += 1
 		message = f'{saved} stores saved({prop_saved}p), {not_saved} remained({prop_not_saved})'
 		

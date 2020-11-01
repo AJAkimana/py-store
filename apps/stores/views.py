@@ -53,6 +53,7 @@ class MigrateStoreView(APIView):
 						prop_not_saved += 1
 				saved += 1
 			else:
+				print(store['action_date'])
 				print(get_errors(serializer.errors))
 				not_saved += 1
 		message = f'{saved} stores saved({prop_saved}p), {not_saved} remained({prop_not_saved})'

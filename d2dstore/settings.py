@@ -158,6 +158,10 @@ USE_L10N = True
 
 USE_TZ = True
 
+# Set up to The URL to api
+USE_X_FORWARDED_HOST = True
+FORCE_SCRIPT_NAME = '/api'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 STATIC_URL = '/api/static/'

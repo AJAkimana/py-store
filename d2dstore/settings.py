@@ -164,4 +164,4 @@ STATIC_URL = '/api/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'frontend', "build", "static"),
 )
-STATIC_ROOT = os.path.join(BASE_DIR, 'api/static/')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')

@@ -59,7 +59,8 @@ class StoreQuery(AbstractType):
 			f"""
 			SELECT to_char(date_trunc('month', action_date), 'Mon, YYYY') AS label,
 			SUM(amount) AS value
-			FROM stores_store WHERE user_id='{user.id}' AND is_inflow={is_inflow}
+			FROM stores_store WHERE action_date > (current_date - INTERVAL '24 months') AND
+			user_id='{user.id}' AND is_inflow={is_inflow}
 			GROUP BY date_trunc('month', action_date)
 			ORDER BY date_trunc('month', action_date) DESC;
 			"""

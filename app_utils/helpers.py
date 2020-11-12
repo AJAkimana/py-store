@@ -1,3 +1,5 @@
+import os
+
 from django.core.paginator import Paginator
 from rest_framework.response import Response
 
@@ -53,3 +55,8 @@ def dict_fetchall(cursor):
 		dict(zip(columns, row))
 		for row in cursor.fetchall()
 	]
+
+
+def backup_filename(databasename, servername, datetime, extension, content_type):
+	backup_type = 'dev' if os.getenv('DEBUG', False) else 'prod'
+	return f'D2DStore_{backup_type}-{datetime}.{extension}'

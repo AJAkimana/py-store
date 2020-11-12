@@ -27,7 +27,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.getenv("SECRET")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(os.getenv('DEBUG') == 'true')
+DEBUG = bool(os.getenv('DEBUG', '') == 'true')
 
 ALLOWED_HOSTS = ['.akimanaja.com', '165.227.5.239', 'localhost']
 
@@ -184,11 +184,11 @@ DBBACKUP_STORAGE_OPTIONS = {
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = bool(os.getenv('SHI_SUB_DOM') == 'true')
-SECURE_CONTENT_TYPE_NOSNIFF = bool(os.getenv('SCT_NOSNIFF') == 'true')
-SECURE_BROWSER_XSS_FILTER = bool(os.getenv('SBX_FILTER') == 'true')
-SECURE_SSL_REDIRECT = bool(os.getenv('S_SSL_REDIRECT') == 'true')
-SESSION_COOKIE_SECURE = bool(os.getenv('S_C_SECURE') == 'true')
-CSRF_COOKIE_SECURE = bool(os.getenv('CSRF_C_SECURE') == 'true')
+SECURE_HSTS_INCLUDE_SUBDOMAINS = bool(os.getenv('SHI_SUB_DOM', '') == 'true')
+SECURE_CONTENT_TYPE_NOSNIFF = bool(os.getenv('SCT_NOSNIFF', '') == 'true')
+SECURE_BROWSER_XSS_FILTER = bool(os.getenv('SBX_FILTER', '') == 'true')
+SECURE_SSL_REDIRECT = bool(os.getenv('S_SSL_REDIRECT', '') == 'true')
+SESSION_COOKIE_SECURE = bool(os.getenv('S_C_SECURE', '') == 'true')
+CSRF_COOKIE_SECURE = bool(os.getenv('CSRF_C_SECURE', '') == 'true')
 X_FRAME_OPTIONS = os.getenv('X_FRAME', 'DENY')
-SECURE_HSTS_PRELOAD = bool(os.getenv('SH_PRELOAD') == 'true')
+SECURE_HSTS_PRELOAD = bool(os.getenv('SH_PRELOAD', '') == 'true')

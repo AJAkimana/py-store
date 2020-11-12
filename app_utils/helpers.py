@@ -58,5 +58,5 @@ def dict_fetchall(cursor):
 
 
 def backup_filename(databasename, servername, datetime, extension, content_type):
-	backup_type = 'dev' if os.getenv('DEBUG', 'true') == 'false' else 'prod'
+	backup_type = 'dev' if os.getenv('DEBUG', 'true') == 'true' else 'prod'
 	return f'D2DStore_{backup_type}-{datetime}.{extension}'

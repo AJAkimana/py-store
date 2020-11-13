@@ -38,7 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 		return self.stores.all()
 	
 	def get_store_total_amount(self, store_type='use', is_inflow=True):
-		store_filter = (Q(record_type=store_type, is_inflow=is_inflow))
+		store_filter = (Q(record_type=store_type, is_inflow=is_inflow, is_property=False))
 		total = sum([store.amount for store in self.stores.filter(store_filter)])
 		return total
 	

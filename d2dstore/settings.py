@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ['.akimanaja.com', '165.227.5.239', 'localhost']
 # Application definition
 
 INSTALLED_APPS = [
+	'django_crontab',  # For automatic job
 	'django.contrib.admin',
 	'django.contrib.auth',
 	'django.contrib.contenttypes',
@@ -182,6 +183,9 @@ DBBACKUP_STORAGE_OPTIONS = {
 	# 'location': os.getenv('DB_BACKUP_ZONE', None)
 }
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
+CRONJOBS = [
+	('0 0 * * 0', 'api.cron.backup_db')
+]
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = bool(os.getenv('SHI_SUB_DOM', '') == 'true')

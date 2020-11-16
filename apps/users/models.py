@@ -36,25 +36,32 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 	def get_user_stores(self):
 		return self.stores.all()
-	
+
 	def get_store_total_amount(self, store_type='use', is_inflow=True):
-		store_filter = (Q(record_type=store_type, is_inflow=is_inflow, is_property=False))
+		store_filter = (Q(record_type=store_type, is_inflow=is_inflow))
 		total = sum([store.amount for store in self.stores.filter(store_filter)])
 		return total
-	
+
 	def get_store_aggregate(self, store_type='use'):
 		percent = 0
 		inflow = self.get_store_total_amount(store_type=store_type)
 		outflow = self.get_store_total_amount(store_type=store_type, is_inflow=False)
+		properties_total_value = self.get_properties_total_value(active=False)
+		total_expenses = outflow + properties_total_value
+
 		if inflow != 0:
-			percent = (outflow / inflow) * 100
-		
-		record = {'inflow': inflow, 'outflow': outflow, 'percent': round(percent, 2)}
+			percent = (total_expenses / inflow) * 100
+
+		record = {'inflow': inflow, 'outflow': total_expenses, 'percent': round(percent, 2)}
 		return record
-		
-	def get_user_properties(self):
-		return self.properties.all()
-	
-	def get_properties_total_value(self):
-		total = sum([prop.price for prop in self.properties.all()])
+
+	def get_user_properties(self, active='all'):
+		if active == 'all':
+			return self.properties.all()
+
+		q_filter = Q(is_active=active)
+		return self.properties.filter(q_filter)
+
+	def get_properties_total_value(self, active='all'):
+		total = sum([prop.price for prop in self.get_user_properties(active=active)])
 		return total

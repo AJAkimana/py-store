@@ -3,26 +3,29 @@ from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
 from app_utils.constants import STORE_CHOICES
+from apps.properties.models import PropDetail
 from apps.stores.models import Store
 from app_utils.model_types.store import StoreInputType, StoreType
+from apps.users.models import User
 
 
 class CreateStore(graphene.Mutation):
 	message = graphene.String()
 	store = graphene.Field(StoreType)
-	
+
 	class Arguments:
 		amount = graphene.Float(required=True)
 		record_type = graphene.String(required=True)
-		is_property = graphene.Boolean(required=True)
+		property_id = graphene.UUID()
 		is_inflow = graphene.Boolean(required=True)
 		action_date = graphene.Date(required=True)
 		description = graphene.String(required=True)
-	
+
 	@login_required
 	def mutate(self, info, **kwargs):
 		store_type = [item for item in STORE_CHOICES if item[0] == kwargs['record_type']]
 		user = info.context.user
+		kwargs['is_property'] = False
 		if not store_type:
 			raise GraphQLError('Invalid store type')
 		has_saved = Store.objects.filter(
@@ -30,24 +33,40 @@ class CreateStore(graphene.Mutation):
 			description=kwargs['description'],
 			user=user).first()
 		if has_saved:
-			raise GraphQLError('You have created this record')
+			raise GraphQLError('The record has already been recorded')
+		if kwargs['property_id']:
+			the_property = User.get_user_properties(user)\
+				.filter(id=kwargs['property_id']).first()
+			if the_property:
+				new_prop_detail = PropDetail(
+					title=kwargs['description'],
+					type=kwargs['record_type'],
+					amount=kwargs['amount'],
+					property=the_property
+				)
+				new_prop_detail.save()
+				kwargs['is_property'] = True
+				del kwargs['property_id']
+			else:
+				raise GraphQLError('The property does not exist')
+
 		kwargs['user_id'] = user.id
 		new_store = Store(**kwargs)
 		new_store.save()
-		
+
 		return CreateStore(
 			message="Successfully saved",
 			store=new_store)
-	
-	
+
+
 class CreateManyStores(graphene.Mutation):
 	message = graphene.String()
 	total_saved = graphene.Int()
 	total_not_saved = graphene.Int()
-	
+
 	class Arguments:
 		stores = graphene.List(StoreInputType)
-	
+
 	@login_required
 	def mutate(self, info, **kwargs):
 		saved = 0
@@ -67,7 +86,7 @@ class CreateManyStores(graphene.Mutation):
 				saved += 1
 			else:
 				not_saved += 1
-		
+
 		return CreateManyStores(
 			message="stores successfully saved",
 			total_saved=saved,

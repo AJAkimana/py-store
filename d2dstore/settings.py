@@ -94,7 +94,7 @@ DATABASES = {
 		# 'OPTIONS': {
 		#     'read_default_file': os.getenv('MYSQL_CONFIG'),
 		# },
-		
+
 		'ENGINE': 'django.db.backends.postgresql_psycopg2',
 		'NAME': os.getenv("DB_NAME", ''),
 		'USER': os.getenv("DB_USER", ''),
@@ -155,7 +155,7 @@ CORS_ORIGIN_WHITELIST = (
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Kigali'
 
 USE_I18N = True
 

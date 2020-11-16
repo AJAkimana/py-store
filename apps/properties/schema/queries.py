@@ -15,7 +15,7 @@ class PropertyQuery(graphene.ObjectType):
 		page_count=graphene.Int(),
 		page_number=graphene.Int())
 	properties_detail = graphene.Field(PropertyDetailType)
-	
+
 	@login_required
 	def resolve_properties(self, info, search=None, **kwargs):
 		page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
@@ -27,10 +27,10 @@ class PropertyQuery(graphene.ObjectType):
 			properties = properties.filter(search_filter)
 		paginated_result = paginate_data(properties, page_count, page_number)
 		return paginated_result
-	
+
 	@login_required
 	def resolve_properties_detail(self, info, **kwargs):
 		user = info.context.user
 		total_count = User.get_user_properties(user).count()
-		total_value = User.get_store_total_amount(user)
+		total_value = User.get_properties_total_value(user)
 		return {'count': total_count, 'total_amount': total_value}

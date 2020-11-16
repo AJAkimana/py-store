@@ -22,7 +22,7 @@ def paginate_data(data_set, page_count, page_number):
 	page_data = paginator.get_page(page_number)
 	num_pages = paginator.num_pages
 	total_count = len(data_set)
-	
+
 	result = {
 		'page_data': page_data,
 		'num_pages': num_pages,
@@ -60,3 +60,11 @@ def dict_fetchall(cursor):
 def backup_filename(databasename, servername, datetime, extension, content_type):
 	backup_type = 'dev' if os.getenv('DEBUG', 'true') == 'true' else 'prod'
 	return f'D2DStore_{backup_type}-{datetime}.{extension}'
+
+
+def properties_active(is_active):
+	active = 'all'
+	if is_active and is_active != 'all':
+		active = True if is_active == 'yes' else False
+
+	return active

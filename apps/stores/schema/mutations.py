@@ -16,7 +16,7 @@ class CreateStore(graphene.Mutation):
 	class Arguments:
 		amount = graphene.Float(required=True)
 		record_type = graphene.String(required=True)
-		property_id = graphene.UUID()
+		property_id = graphene.String(required=False)
 		is_inflow = graphene.Boolean(required=True)
 		action_date = graphene.Date(required=True)
 		description = graphene.String(required=True)
@@ -40,7 +40,7 @@ class CreateStore(graphene.Mutation):
 			if the_property:
 				new_prop_detail = PropDetail(
 					title=kwargs['description'],
-					type=kwargs['record_type'],
+					type=('in', 'out')[kwargs['is_inflow']],
 					amount=kwargs['amount'],
 					property=the_property
 				)
@@ -49,7 +49,7 @@ class CreateStore(graphene.Mutation):
 				del kwargs['property_id']
 			else:
 				raise GraphQLError('The property does not exist')
-
+		del kwargs['property_id']
 		kwargs['user_id'] = user.id
 		new_store = Store(**kwargs)
 		new_store.save()

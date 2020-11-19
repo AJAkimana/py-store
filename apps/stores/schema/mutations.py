@@ -42,7 +42,7 @@ class CreateStore(graphene.Mutation):
 			if the_property:
 				new_prop_detail = PropDetail(
 					title=kwargs['description'],
-					type=('in', 'out')[kwargs['is_inflow']],
+					type='in' if kwargs['is_inflow'] else 'out',
 					amount=kwargs['amount'],
 					property=the_property
 				)

@@ -26,6 +26,8 @@ class CreateStore(graphene.Mutation):
 		store_type = [item for item in STORE_CHOICES if item[0] == kwargs['record_type']]
 		user = info.context.user
 		kwargs['is_property'] = False
+		property_id = kwargs['property_id']
+		del kwargs['property_id']
 		if not store_type:
 			raise GraphQLError('Invalid store type')
 		has_saved = Store.objects.filter(
@@ -34,9 +36,9 @@ class CreateStore(graphene.Mutation):
 			user=user).first()
 		if has_saved:
 			raise GraphQLError('The record has already been recorded')
-		if kwargs['property_id']:
+		if property_id:
 			the_property = User.get_user_properties(user)\
-				.filter(id=kwargs['property_id']).first()
+				.filter(id=property_id).first()
 			if the_property:
 				new_prop_detail = PropDetail(
 					title=kwargs['description'],
@@ -46,10 +48,8 @@ class CreateStore(graphene.Mutation):
 				)
 				new_prop_detail.save()
 				kwargs['is_property'] = True
-				del kwargs['property_id']
 			else:
 				raise GraphQLError('The property does not exist')
-		del kwargs['property_id']
 		kwargs['user_id'] = user.id
 		new_store = Store(**kwargs)
 		new_store.save()

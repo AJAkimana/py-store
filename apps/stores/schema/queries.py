@@ -22,11 +22,12 @@ class StoreQuery(AbstractType):
 	store_count = graphene.Int()
 	monthly_store = graphene.List(MonthType, is_inflow=graphene.Boolean())
 	store_aggregate = graphene.Field(StoreRatioType, store_type=graphene.String())
-	
+
 	@login_required
 	def resolve_stores(self, info, search=None, store_type='use', **kwargs):
 		page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
 		page_number = kwargs.get('page_number', PAGINATION_DEFAULT['page_number'])
+		print(page_count, page_number)
 		user = info.context.user
 		stores = User.get_user_stores(user).filter(record_type=store_type)
 		if search:
@@ -36,22 +37,22 @@ class StoreQuery(AbstractType):
 			stores = stores.filter(search_filter)
 		paginated_result = paginate_data(stores, page_count, page_number)
 		return paginated_result
-	
+
 	@login_required
 	def resolve_total_inflow(self, info, store_type='use', **kwargs):
 		user = info.context.user
 		return User.get_store_total_amount(user, store_type)
-	
+
 	@login_required
 	def resolve_total_outflow(self, info, store_type='use', **kwargs):
 		user = info.context.user
 		return User.get_store_total_amount(user, store_type, False)
-	
+
 	@login_required
 	def resolve_store_count(self, info):
 		user = info.context.user
 		return User.get_user_stores(user).count()
-	
+
 	@login_required
 	def resolve_monthly_store(self, info, is_inflow=False):
 		user = info.context.user
@@ -79,10 +80,10 @@ class StoreQuery(AbstractType):
 			stores = dict_fetchall(cursor)
 
 		return stores
-	
+
 	@login_required
 	def resolve_store_aggregate(self, info, store_type='use', **kwargs):
 		user = info.context.user
 		aggregate = User.get_store_aggregate(user, store_type)
-		
+
 		return aggregate

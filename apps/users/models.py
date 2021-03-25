@@ -28,6 +28,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 	objects = UserManager()
 
+	class Meta:
+		db_table = "users"
+
 	def __str__(self):
 		return f'{self.first_name} {self.last_name}'
 

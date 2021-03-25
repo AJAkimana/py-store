@@ -12,14 +12,14 @@ from app_utils.database import get_model_object
 class CreateProperty(graphene.Mutation):
 	message = MsgSerializer()
 	property = graphene.Field(PropertyType)
-	
+
 	class Arguments:
 		name = graphene.String(required=True)
 		price = graphene.Float(required=True)
 		description = graphene.String(required=True)
 		cover_image = graphene.String()
 		is_active = graphene.Boolean()
-	
+
 	@login_required
 	def mutate(self, info, **kwargs):
 		user = info.context.user
@@ -27,42 +27,69 @@ class CreateProperty(graphene.Mutation):
 		has_saved = user_properties.filter(name=kwargs['name'])
 		if has_saved:
 			raise GraphQLError('The property already created')
-		
+
 		serializer = PropertySerializer(data=kwargs)
-		
+
 		if serializer.is_valid():
 			new_property = serializer.save(owner=user)
 			message = "The property created"
 		else:
 			message = get_errors(serializer.errors)
 			raise GraphQLError(message)
-		
+
 		return CreateProperty(message=message, property=new_property)
 
 
 class AddPropDetail(graphene.Mutation):
 	message = MsgSerializer()
 	new_detail = graphene.Field(DetailType)
-	
+
 	class Arguments:
 		title = graphene.String(required=True)
 		is_inflow = graphene.Boolean(required=True)
 		amount = graphene.Float(required=True)
-		property_id = graphene.Int(required=True)
-	
+		property_id = graphene.UUID(required=True)
+
 	@login_required
 	def mutate(self, info, property_id, **kwargs):
 		the_property = get_model_object(Property, 'id', property_id)
-		
+
 		kwargs['type'] = 'in' if kwargs['is_inflow'] else 'out'
 		serializer = PropDetailSerializer(data=kwargs)
-		
-		if serializer.is_valid():
-			new_detail = serializer.save(property_id=the_property.id)
-			message = 'The prop detail has successfully added'
-		else:
+
+		if not serializer.is_valid():
 			message = get_errors(serializer.errors)
 			raise GraphQLError(message)
+		new_detail = serializer.save(property_id=the_property.id)
+		message = 'The prop detail has successfully added'
+
+		return AddPropDetail(message=message, new_detail=new_detail)
+
+
+class UpdatePropDetail(graphene.Mutation):
+	message = MsgSerializer()
+	new_detail = graphene.Field(DetailType)
+
+	class Arguments:
+		prop_detail_id = graphene.UUID(required=True)
+		property_id = graphene.UUID(required=True)
+		title = graphene.String(required=True)
+		is_inflow = graphene.Boolean(required=True)
+		amount = graphene.Float(required=True)
+
+	@login_required
+	def mutate(self, info, prop_detail_id, property_id, **kwargs):
+		the_property = get_model_object(Property, 'id', property_id)
+
+		kwargs['type'] = 'in' if kwargs['is_inflow'] else 'out'
+		serializer = PropDetailSerializer(data=kwargs)
+
+		if not serializer.is_valid():
+			message = get_errors(serializer.errors)
+			raise GraphQLError(message)
+		new_detail = serializer.save(property_id=the_property.id)
+		message = 'The prop detail has successfully added'
+
 		return AddPropDetail(message=message, new_detail=new_detail)
 
 

@@ -4,7 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction, IntegrityError, DatabaseError, OperationalError
 from graphql import GraphQLError
 
-from .common_messages import ERROR_RESPONSES
+from .common_messages import ERROR_MSG
 from .error_handler import errors
 
 
@@ -106,7 +106,7 @@ def get_model_object(model, column_name, column_value, **kwargs):
     try:
         if ((column_name == "id") and isinstance(column_value, int) and
                 (column_value < 1)):
-            error_message = ERROR_RESPONSES[
+            error_message = ERROR_MSG[
                 "invalid_id"].format(column_value)
             raise GraphQLError(error_message)
         model_instance = manager_query.get(**{column_name: column_value})

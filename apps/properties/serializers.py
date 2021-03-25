@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
+
 from apps.properties.models import Property, PropDetail
 
 
@@ -12,3 +14,9 @@ class PropDetailSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = PropDetail
 		fields = ('id', 'title', 'amount', 'type')
+		validators = [
+			UniqueTogetherValidator(
+				queryset=PropDetail.objects.all(), fields=['title', 'amount', 'type'],
+				message="Invalid input prop detail"
+			)
+		]

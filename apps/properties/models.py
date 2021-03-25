@@ -16,6 +16,7 @@ class Property(BaseModel):
 		return self.name
 
 	class Meta:
+		db_table = "properties"
 		ordering = ['name']
 		unique_together = ['name', 'owner']
 
@@ -24,10 +25,11 @@ class PropDetail(BaseModel):
 	title = models.CharField(max_length=255, blank=False)
 	amount = models.FloatField(blank=False)
 	type = models.CharField(choices=AMOUNT_TYPES, default='out', blank=False, max_length=10)
-	property = models.ForeignKey(Property, related_name='prop_details', on_delete=models.CASCADE)
+	property = models.ForeignKey(Property, related_name='prop_details', on_delete=models.PROTECT)
 
 	def __str__(self):
 		return self.title
 
 	class Meta:
 		ordering = ['title']
+		db_table = "property_details"

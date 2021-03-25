@@ -5,10 +5,11 @@ from apps.users.models import User
 
 class House(BaseModel):
 	name = models.CharField(blank=False, max_length=255, default='Our house')
-	user = models.ForeignKey(User, related_name='owner', on_delete=models.CASCADE)
+	user = models.ForeignKey(User, related_name='owner', on_delete=models.PROTECT)
 
 	def __str__(self):
 		return self.name
 
 	class Meta:
+		db_table = "houses"
 		ordering = ['name']

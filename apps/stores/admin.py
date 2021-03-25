@@ -11,7 +11,7 @@ class StoreAdmin(BaseModelAdmin):
 	form = StoreChangeForm
 	model = Store
 	list_display = ['amount', 'record_type', 'description', 'is_property', 'is_inflow', 'action_date', 'user']
-	list_filter = ['amount', 'record_type', 'description', 'is_property', 'is_inflow', 'action_date', 'user']
+	list_filter = ['record_type', 'is_property', 'is_inflow', 'user']
 	fieldsets = (
 		(_('Amount Information'), {'fields': ('amount', 'is_inflow', 'is_property')}),
 		(_('Detailed Information'), {'fields': ('description', 'record_type',)}),

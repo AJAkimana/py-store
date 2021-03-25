@@ -78,21 +78,23 @@ class UpdatePropDetail(graphene.Mutation):
 		amount = graphene.Float(required=True)
 
 	@login_required
-	def mutate(self, info, prop_detail_id, property_id, **kwargs):
-		the_property = get_model_object(Property, 'id', property_id)
+	def mutate(self, info, prop_detail_id, **kwargs):
+		the_property = get_model_object(Property, 'id', kwargs["property_id"])
+		the_detail = get_model_object(PropDetail, 'id', prop_detail_id)
 
 		kwargs['type'] = 'in' if kwargs['is_inflow'] else 'out'
-		serializer = PropDetailSerializer(data=kwargs)
+		serializer = PropDetailSerializer(the_detail, data=kwargs)
 
 		if not serializer.is_valid():
 			message = get_errors(serializer.errors)
 			raise GraphQLError(message)
-		new_detail = serializer.save(property_id=the_property.id)
-		message = 'The prop detail has successfully added'
+		new_detail = serializer.save(property=the_property)
+		message = 'The prop detail has successfully update'
 
-		return AddPropDetail(message=message, new_detail=new_detail)
+		return UpdatePropDetail(message=message, new_detail=new_detail)
 
 
 class PropertyMutations(graphene.ObjectType):
 	create_property = CreateProperty.Field()
 	add_prop_detail = AddPropDetail.Field()
+	update_prop_detail = UpdatePropDetail.Field()

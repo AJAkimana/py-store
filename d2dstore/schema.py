@@ -1,6 +1,5 @@
 import graphene
-import graphql_jwt
-from graphql_jwt import ObtainJSONWebToken
+from graphql_jwt import ObtainJSONWebToken, Verify, Refresh
 
 from apps.stores.schema.queries import StoreQuery
 from apps.properties.schema.queries import PropertyQuery
@@ -20,8 +19,8 @@ class AppMutations(
 	PropertyMutations,
 	graphene.ObjectType):
 	token_auth = ObtainJSONWebToken.Field()
-	verify_token = graphql_jwt.Verify.Field()
-	refresh_token = graphql_jwt.Refresh.Field()
+	verify_token = Verify.Field()
+	refresh_token = Refresh.Field()
 
 
 schema = graphene.Schema(query=AppQuery, mutation=AppMutations)

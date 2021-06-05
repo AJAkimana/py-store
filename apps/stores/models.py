@@ -20,10 +20,8 @@ class Store(BaseModel):
 
 	class Meta:
 		db_table = "stores"
+		ordering = ['-action_date']
+		unique_together = ['description', 'action_date', 'user']
 
 	def __str__(self):
 		return self.description
-
-	class Meta:
-		ordering = ['-action_date']
-		unique_together = ['description', 'action_date', 'user']

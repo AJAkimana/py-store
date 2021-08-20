@@ -11,7 +11,7 @@ class ManageSystemQuery(AbstractType):
 	db_backup = graphene.Field(DbBackupType)
 
 	@login_required
-	def resolve_db_backup(self, **kwargs):
+	def resolve_db_backup(self, info, **kwargs):
 		try:
 			call_command('dbbackup')
 			print('Db backed up')

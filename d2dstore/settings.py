@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 	'apps.stores',
 	'apps.houses',
 	'apps.properties',
+	'apps.manage_system',
 	'dbbackup',  # django-dbbackup
 ]
 

@@ -27,7 +27,7 @@ class StoreQuery(AbstractType):
 	def resolve_stores(self, info, search=None, store_type='use', **kwargs):
 		page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
 		page_number = kwargs.get('page_number', PAGINATION_DEFAULT['page_number'])
-		print(page_count, page_number)
+
 		user = info.context.user
 		stores = User.get_user_stores(user).filter(record_type=store_type)
 		if search:

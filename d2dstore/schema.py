@@ -7,9 +7,16 @@ from apps.properties.schema.mutations import PropertyMutations
 from apps.stores.schema.mutations import StoreMutation
 from apps.users.schema.mutations import UserMutation
 from apps.users.schema.queries import UserQuery
+from apps.manage_system.schema.queries import ManageSystemQuery
 
 
-class AppQuery(UserQuery, StoreQuery, PropertyQuery, graphene.ObjectType):
+class AppQuery(
+	UserQuery,
+	StoreQuery,
+	PropertyQuery,
+	ManageSystemQuery,
+	graphene.ObjectType
+):
 	pass
 
 
@@ -17,7 +24,8 @@ class AppMutations(
 	StoreMutation,
 	UserMutation,
 	PropertyMutations,
-	graphene.ObjectType):
+	graphene.ObjectType
+):
 	token_auth = ObtainJSONWebToken.Field()
 	verify_token = Verify.Field()
 	refresh_token = Refresh.Field()

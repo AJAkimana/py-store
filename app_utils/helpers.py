@@ -68,3 +68,27 @@ def properties_active(is_active):
 		active = True if is_active == 'yes' else False
 
 	return active
+
+
+def calculate_percent(gross_salary, percent=3):
+	return (percent * gross_salary) / 100
+
+
+def calculate_tax(gross_salary=0):
+	tax = 0
+	if 30000 < gross_salary <= 100000:
+		tax = 0.2 * gross_salary - 6000
+	elif gross_salary > 100000:
+		tax = 0.3 * gross_salary - 16000
+	return tax
+
+
+def calculate_gross_salary(net_salary=0):
+	gross_salary = net_salary
+	if net_salary <= 29010:
+		gross_salary = net_salary / 0.967
+	elif 29010 < net_salary <= 82700:
+		gross_salary = (net_salary - 6000) / 0.767
+	elif net_salary > 82700:
+		gross_salary = (net_salary - 16000) / 0.667
+	return gross_salary

@@ -14,9 +14,9 @@ class ManageSystemQuery(AbstractType):
 	def resolve_db_backup(self, info, **kwargs):
 		try:
 			call_command('dbbackup')
-			print('Db backed up')
+			# print('Db backed up')
 			res = {'message': 'Db backed up'}
 			return res
 		except CommandError as error:
-			print(error)
+			# print(error)
 			raise GraphQLError('Error while backup')

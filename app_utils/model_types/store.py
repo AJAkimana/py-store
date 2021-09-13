@@ -32,3 +32,20 @@ class StoreRatioType(graphene.ObjectType):
 	inflow = graphene.Int()
 	outflow = graphene.Int()
 	percent = graphene.Float()
+
+
+class FacilityType(graphene.InputObjectType):
+	is_constant = graphene.Boolean()
+	amount = graphene.Float()
+	percent_amount = graphene.Float()
+	percent_field = graphene.String()
+
+
+class SalaryType(graphene.ObjectType):
+	gross_salary = graphene.Float()
+	net_salary = graphene.Float()
+	net_pay = graphene.Float()
+	pension = graphene.Float()
+	maternity = graphene.Float()
+	facilities = graphene.Float()
+	tax = graphene.Float()

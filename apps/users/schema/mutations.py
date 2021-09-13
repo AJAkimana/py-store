@@ -4,6 +4,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import update_last_login
 from graphql import GraphQLError
 from graphql_jwt.utils import jwt_payload, jwt_encode
+from graphql_jwt.shortcuts import get_token
 from app_utils.database import get_model_object
 from apps.users.models import User
 from app_utils.model_types.user import UserType
@@ -59,7 +60,7 @@ class LoginUser(graphene.Mutation):
         user = get_model_object(User, 'email', email)
         update_last_login(sender=User, user=user)
         user_payload = jwt_payload(user_auth)
-        token = jwt_encode(user_payload)
+        token = get_token(user)
         rest_payload = Token.objects.get_or_create(user=user_auth)
         rest_token = rest_payload[0]
 

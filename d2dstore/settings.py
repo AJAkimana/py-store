@@ -15,7 +15,7 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 
-from app_utils.helpers import backup_filename
+# from app_utils.helpers import backup_filename
 
 load_dotenv(os.path.abspath('.env'))
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -25,7 +25,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET")
+SECRET_KEY = os.getenv("SECRET", '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.getenv('DEBUG', '') == 'true')
@@ -130,16 +130,6 @@ GRAPHENE = {
     "graphql_jwt.middleware.JSONWebTokenMiddleware"
   ],
 }
-GRAPHQL_JWT = {
-  'JWT_PAYLOAD_HANDLER': 'app_utils.helpers.jwt_payload',
-  'JWT_AUTH_HEADER_PREFIX': 'JWT',
-  'JWT_VERIFY_EXPIRATION': True,
-  'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
-  'JWT_EXPIRATION_DELTA': timedelta(minutes=5),
-  'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
-  'JWT_SECRET_KEY': os.getenv("SECRET_KEY", "dss"),
-  'JWT_ALGORITHM': 'HS256',
-}
 REST_FRAMEWORK = {
   'DEFAULT_RENDERER_CLASSES': [
     'rest_framework.renderers.JSONRenderer',
@@ -153,6 +143,16 @@ REST_FRAMEWORK = {
     'rest_framework.parsers.JSONParser',
   )
 }
+# GRAPHQL_JWT = {
+#   'JWT_PAYLOAD_HANDLER': 'app_utils.helpers.jwt_payload',
+#   'JWT_AUTH_HEADER_PREFIX': 'JWT',
+#   'JWT_VERIFY_EXPIRATION': True,
+#   'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
+#   'JWT_EXPIRATION_DELTA': timedelta(minutes=5),
+#   'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
+#   'JWT_SECRET_KEY': os.getenv("SECRET_KEY", ""),
+#   'JWT_ALGORITHM': 'HS256'
+# }
 AUTHENTICATION_BACKENDS = [
   'graphql_jwt.backends.JSONWebTokenBackend',
   'django.contrib.auth.backends.ModelBackend',
@@ -194,7 +194,7 @@ DBBACKUP_STORAGE_OPTIONS = {
   'oauth2_access_token': os.getenv('DROPBOX_TOKEN', ''),
   # 'location': os.getenv('DB_BACKUP_ZONE', None)
 }
-DBBACKUP_FILENAME_TEMPLATE = backup_filename
+# DBBACKUP_FILENAME_TEMPLATE = backup_filename
 CRONJOBS = [
   ('0 0 * * 0', 'api.cron.backup_db')
 ]

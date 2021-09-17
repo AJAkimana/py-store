@@ -1,4 +1,5 @@
 import os
+import jwt
 
 from django.core.paginator import Paginator
 from rest_framework.response import Response
@@ -16,9 +17,9 @@ def jwt_payload(user, context=None):
   jwt_datetime = datetime.utcnow() + jwt_settings.JWT_EXPIRATION_DELTA
   jwt_expires = int(jwt_datetime.timestamp())
   payload = {}
-  payload['username'] = str(user.username)  # For library compatibility
+  payload['username'] = str(user.email)  # For library compatibility
   payload['sub'] = str(user.id)
-  payload['sub_name'] = user.username
+  payload['sub_name'] = user.email
   payload['sub_email'] = user.email
   payload['exp'] = jwt_expires
   # payload['https://hasura.io/jwt/claims'] = {}

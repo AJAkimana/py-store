@@ -41,5 +41,4 @@ class UserQuery(graphene.AbstractType):
 	@login_required
 	def resolve_welcome(self, info, **kwargs):
 		message = 'Welcome to the D2DStore system'
-		print(info.context.user)
 		return {'message': message}

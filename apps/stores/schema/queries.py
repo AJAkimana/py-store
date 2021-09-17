@@ -6,6 +6,7 @@ from graphql_jwt.decorators import login_required
 from app_utils.helpers import paginate_data, PAGINATION_DEFAULT, dict_fetchall
 from app_utils.model_types.store import StorePaginatorType, \
 	MonthType, StoreRatioType
+from apps.stores.models import Store
 from apps.users.models import User
 
 
@@ -56,11 +57,12 @@ class StoreQuery(AbstractType):
 	@login_required
 	def resolve_monthly_store(self, info, is_inflow=False):
 		user = info.context.user
+		table_name = Store._meta.db_table
 		pg_query = \
 			f"""
 			SELECT to_char(date_trunc('month', action_date), 'Mon, YYYY') AS label,
 			SUM(amount) AS value
-			FROM stores_store WHERE action_date > (current_date - INTERVAL '24 months') AND
+			FROM {table_name} WHERE action_date > (current_date - INTERVAL '24 months') AND
 			user_id='{user.id}' AND is_inflow={is_inflow}
 			GROUP BY date_trunc('month', action_date)
 			ORDER BY date_trunc('month', action_date) DESC;
@@ -69,7 +71,7 @@ class StoreQuery(AbstractType):
 			f"""
 			SELECT id, DATE_FORMAT(action_date, '%%b, %%Y') AS label,
 			SUM(amount) AS value
-			FROM stores_store WHERE user_id='{user.id}' AND is_inflow={is_inflow}
+			FROM {table_name} WHERE user_id='{user.id}' AND is_inflow={is_inflow}
 			GROUP BY label, year(action_date)
 			ORDER BY action_date DESC
 			"""

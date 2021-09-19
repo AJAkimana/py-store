@@ -27,7 +27,7 @@ class CreateStore(graphene.Mutation):
 		user = info.context.user
 		kwargs['is_property'] = False
 		property_id = kwargs['property_id']
-		del kwargs['property_id']
+		# del kwargs['property_id']
 		if not store_type:
 			raise GraphQLError('Invalid store type')
 		has_saved = Store.objects.filter(

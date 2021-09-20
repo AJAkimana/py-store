@@ -30,12 +30,13 @@ class StoreQuery(AbstractType):
 		page_number = kwargs.get('page_number', PAGINATION_DEFAULT['page_number'])
 
 		user = info.context.user
-		stores = User.get_user_stores(user).filter(record_type=store_type)
+		search_filter = Q(record_type=store_type)
 		if search:
 			search_filter = (
 					Q(amount__icontains=search) | Q(description__icontains=search)
 			)
-			stores = stores.filter(search_filter)
+		stores = User.get_user_stores(user).filter(search_filter)
+
 		paginated_result = paginate_data(stores, page_count, page_number)
 		return paginated_result
 

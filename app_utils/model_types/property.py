@@ -1,11 +1,12 @@
 import graphene
 from graphene_django import DjangoObjectType
 from apps.properties.models import Property, PropDetail
+from apps.stores.models import Store
 
 
 class DetailType(DjangoObjectType):
 	class Meta:
-		model = PropDetail
+		model = Store
 
 
 class PropertyType(DjangoObjectType):
@@ -17,14 +18,14 @@ class PropertyType(DjangoObjectType):
 		model = Property
 
 	def resolve_details_counts(self, info, **kwargs):
-		return self.prop_details.count()
+		return self.stores.count()
 
 	def resolve_details_ins(self, info, **kwargs):
-		total = sum([prop.amount for prop in self.prop_details.filter(type='in')])
+		total = sum([prop.amount for prop in self.stores.filter(is_inflow=True)])
 		return total
 
 	def resolve_details_outs(self, info, **kwargs):
-		total = sum([prop.amount for prop in self.prop_details.filter(type='out')])
+		total = sum([prop.amount for prop in self.stores.filter(is_inflow=False)])
 		return total
 
 

@@ -18,7 +18,7 @@ class Store(BaseModel):
 	description = models.CharField(max_length=200, default='*Home expense')
 	action_date = models.DateField(blank=False, null=False, default=now)
 	user = models.ForeignKey(User, related_name='stores', on_delete=models.PROTECT)
-	property = models.ForeignKey(Property, on_delete=models.PROTECT, null=True)
+	property = models.ForeignKey(Property, related_name='stores', on_delete=models.PROTECT, null=True)
 
 	class Meta:
 		db_table = "stores"

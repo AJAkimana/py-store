@@ -25,7 +25,7 @@ class PropDetail(BaseModel):
 	title = models.CharField(max_length=255, blank=False)
 	amount = models.FloatField(blank=False)
 	type = models.CharField(choices=AMOUNT_TYPES, default='out', blank=False, max_length=10)
-	property = models.ForeignKey(Property, related_name='prop_details', on_delete=models.PROTECT)
+	property = models.ForeignKey(Property, related_name='prop_details', on_delete=models.PROTECT, null=True)
 
 	def __str__(self):
 		return self.title

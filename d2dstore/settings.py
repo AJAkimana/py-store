@@ -16,6 +16,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 
 # from app_utils.helpers import backup_filename
+from app_utils.helpers import backup_filename
 
 load_dotenv(os.path.abspath('.env'))
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -194,7 +195,7 @@ DBBACKUP_STORAGE_OPTIONS = {
   'oauth2_access_token': os.getenv('DROPBOX_TOKEN', ''),
   # 'location': os.getenv('DB_BACKUP_ZONE', None)
 }
-# DBBACKUP_FILENAME_TEMPLATE = backup_filename
+DBBACKUP_FILENAME_TEMPLATE = backup_filename
 CRONJOBS = [
   ('0 0 * * 0', 'api.cron.backup_db')
 ]

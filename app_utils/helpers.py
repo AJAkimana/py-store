@@ -1,10 +1,10 @@
 import os
-import jwt
+# import jwt
 
 from django.core.paginator import Paginator
 from rest_framework.response import Response
-from datetime import datetime
-from graphql_jwt.settings import jwt_settings
+# from datetime import datetime
+# from graphql_jwt.settings import jwt_settings
 
 PAGINATION_DEFAULT = {
   "page_number": 1,
@@ -13,20 +13,20 @@ PAGINATION_DEFAULT = {
 
 
 ## JWT payload for Hasura
-def jwt_payload(user, context=None):
-  jwt_datetime = datetime.utcnow() + jwt_settings.JWT_EXPIRATION_DELTA
-  jwt_expires = int(jwt_datetime.timestamp())
-  payload = {}
-  payload['username'] = str(user.email)  # For library compatibility
-  payload['sub'] = str(user.id)
-  payload['sub_name'] = user.email
-  payload['sub_email'] = user.email
-  payload['exp'] = jwt_expires
-  # payload['https://hasura.io/jwt/claims'] = {}
-  # payload['https://hasura.io/jwt/claims']['x-hasura-allowed-roles'] = [user.profile.role]
-  # payload['https://hasura.io/jwt/claims']['x-hasura-default-role'] = user.profile.role
-  # payload['https://hasura.io/jwt/claims']['x-hasura-user-id'] = str(user.id)
-  return payload
+# def jwt_payload(user, context=None):
+#   jwt_datetime = datetime.utcnow() + jwt_settings.JWT_EXPIRATION_DELTA
+#   jwt_expires = int(jwt_datetime.timestamp())
+#   payload = {}
+#   payload['username'] = str(user.email)  # For library compatibility
+#   payload['sub'] = str(user.id)
+#   payload['sub_name'] = user.email
+#   payload['sub_email'] = user.email
+#   payload['exp'] = jwt_expires
+#   # payload['https://hasura.io/jwt/claims'] = {}
+#   # payload['https://hasura.io/jwt/claims']['x-hasura-allowed-roles'] = [user.profile.role]
+#   # payload['https://hasura.io/jwt/claims']['x-hasura-default-role'] = user.profile.role
+#   # payload['https://hasura.io/jwt/claims']['x-hasura-user-id'] = str(user.id)
+#   return payload
 
 
 def paginate_data(data_set, page_count, page_number):

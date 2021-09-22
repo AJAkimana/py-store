@@ -1,6 +1,6 @@
 import graphene
 from graphql import GraphQLError
-from graphql_jwt.decorators import login_required
+from graphql_jwt.decorators import login_required, superuser_required
 
 from app_utils.constants import STORE_CHOICES
 from app_utils.database import get_model_object, SaveContextManager
@@ -96,19 +96,25 @@ class MigrateStoreProperties(graphene.Mutation):
 	class Arguments:
 		pass
 
-	@login_required
+	@superuser_required
 	def mutate(self, info, **kwargs):
 		stores = Store.objects.filter(is_property=True)
-		fields_to_update = ['property_id']
+		fields_to_update = ['property_id', 'is_property']
 		for store in stores:
-			prop_detail = PropDetail.objects.get(
+			prop_detail = PropDetail.objects.filter(
 				title=store.description,
 				amount=store.amount,
-				created_at__date=store.updated_at.date())
-			store.property_id = prop_detail.property_id
-		Store.objects.bulk_update(stores, fields_to_update, batch_size=1000)
+				created_at__date=store.updated_at.date()).first()
+			if prop_detail:
+				store.property_id = prop_detail.property_id
+				store.is_property = False
+			else:
+				print('Failed store======>')
+				print(store)
+				break
+		Store.objects.bulk_update(stores, fields_to_update, batch_size=500)
 
-		return MigrateStoreProperties(message='Successfully migrated')
+		return MigrateStoreProperties(message=f"{len(stores)} stores successfully migrated")
 
 
 class StoreMutation(graphene.ObjectType):

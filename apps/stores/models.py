@@ -26,4 +26,4 @@ class Store(BaseModel):
 		unique_together = ['description', 'action_date', 'user']
 
 	def __str__(self):
-		return self.description
+		return f"{self.description} Amount: {self.amount}"

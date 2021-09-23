@@ -108,6 +108,7 @@ class MigrateStoreProperties(graphene.Mutation):
 			if prop_detail:
 				store.property_id = prop_detail.property_id
 				store.is_property = False
+
 			else:
 				print('Failed store======>')
 				print(store)

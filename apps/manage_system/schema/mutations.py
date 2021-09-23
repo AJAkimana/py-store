@@ -33,18 +33,17 @@ class CalculateSalary(graphene.Mutation):
     net_salary = gross_salary - (pension + maternity + tax)
     net_pay = gross_salary
 
-    res = {
-      'message': 'Success',
-      'salary': {
-        'pension': round(pension, 2),
-        'maternity': round(maternity, 2),
-        'tax': round(tax, 2),
-        'net_salary': round(net_salary, 2),
-        'gross_salary': round(gross_salary, 2),
-        'net_pay': round(net_pay, 2)
-      }
+    salary = {
+      'pension': round(pension, 2),
+      'maternity': round(maternity, 2),
+      'tax': round(tax, 2),
+      'net_salary': round(net_salary, 2),
+      'gross_salary': round(gross_salary, 2),
+      'net_pay': round(net_pay, 2)
     }
-    return res
+
+
+    return CalculateSalary(message='Successful', salary=salary)
 
 
 class ManageSystemMutations(graphene.ObjectType):

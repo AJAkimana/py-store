@@ -1,5 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
+
+from apps.manage_system.models import Salary
 from apps.stores.models import Store
 
 
@@ -41,11 +43,19 @@ class FacilityType(graphene.InputObjectType):
 	percent_field = graphene.String()
 
 
-class SalaryType(graphene.ObjectType):
-	gross_salary = graphene.Float()
-	net_salary = graphene.Float()
-	net_pay = graphene.Float()
-	pension = graphene.Float()
-	maternity = graphene.Float()
-	facilities = graphene.Float()
-	tax = graphene.Float()
+class SalaryType(DjangoObjectType):
+	class Meta:
+		model = Salary
+	# gross_salary = graphene.Float()
+	# net_salary = graphene.Float()
+	# net_pay = graphene.Float()
+	# pension = graphene.Float()
+	# maternity = graphene.Float()
+	# facilities = graphene.Float()
+	# tax = graphene.Float()
+
+
+class SalaryPaginatorType(graphene.ObjectType):
+	page_data = graphene.List(SalaryType)
+	num_pages = graphene.Int()
+	total_count = graphene.Int()

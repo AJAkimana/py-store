@@ -1,7 +1,10 @@
 import graphene
+from graphql import GraphQLError
+from ipware import get_client_ip
 
 from app_utils.helpers import calculate_percent, calculate_tax, calculate_gross_salary
 from app_utils.model_types.store import SalaryType, FacilityType
+from apps.manage_system.models import Salary
 
 
 class CalculateSalary(graphene.Mutation):
@@ -24,6 +27,8 @@ class CalculateSalary(graphene.Mutation):
     maternity_percent = kwargs.get('maternity_percent', 0.3)
     facilities = kwargs.get('facilities', [])
 
+    if gross_salary == 0 and net_salary == 0:
+      raise GraphQLError('Either net or gross salary has not to be zero')
     if gross_salary == 0 and net_salary > 0:
       gross_salary = calculate_gross_salary(net_salary)
 
@@ -33,15 +38,14 @@ class CalculateSalary(graphene.Mutation):
     net_salary = gross_salary - (pension + maternity + tax)
     net_pay = gross_salary
 
-    salary = {
-      'pension': round(pension, 2),
-      'maternity': round(maternity, 2),
-      'tax': round(tax, 2),
-      'net_salary': round(net_salary, 2),
-      'gross_salary': round(gross_salary, 2),
-      'net_pay': round(net_pay, 2)
-    }
+    client_ip, is_routable = get_client_ip(info.context)
 
+    salary = Salary(
+      pension=round(pension, 2), maternity=round(maternity, 2), tax=round(tax, 2),
+      net_pay=round(net_pay, 2), net_salary=round(net_salary, 2),
+      gross_salary=round(gross_salary, 2), client_ip=client_ip
+    )
+    salary.save()
 
     return CalculateSalary(message='Successful', salary=salary)
 

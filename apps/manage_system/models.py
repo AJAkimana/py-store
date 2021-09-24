@@ -13,6 +13,10 @@ class Salary(BaseModel):
   gross_salary = models.FloatField()
   net_pay = models.FloatField()
   client_ip = models.CharField(max_length=20, default='')
+  city = models.CharField(max_length=20, default='')
+  country = models.CharField(max_length=20, default='')
+  lat = models.CharField(max_length=20, default='')
+  long = models.CharField(max_length=20, default='')
 
   class Meta:
     db_table = 'salaries'

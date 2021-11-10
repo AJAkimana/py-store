@@ -188,6 +188,8 @@ STATICFILES_DIRS = [
   os.getenv('ROOT_STATIC_DI', '')
 ]
 
+# GeopIP2
+GEOIP_PATH = os.getenv('GEOIP_PATH', '')
 # Backup database
 # DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE = 'storages.backends.dropbox.DropBoxStorage'

@@ -45,9 +45,12 @@ class CalculateSalary(graphene.Mutation):
     lat, long = '', ''
     if client_ip and client_ip != '127.0.0.1':
       geoip = GeoIP2()
-      city = geoip.city(client_ip)
-      country = geoip.country(client_ip)
-      lat, long = geoip.lat_lon(client_ip)
+      city_info = geoip.city(client_ip)
+      city = city_info['city']
+      country = city_info['country_name']
+      lat = city_info['latitude']
+      long = city_info['longitude']
+
     salary = Salary(
       pension=round(pension, 2), maternity=round(maternity, 2), tax=round(tax, 2),
       net_pay=round(net_pay, 2), net_salary=round(net_salary, 2),

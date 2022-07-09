@@ -10,6 +10,12 @@ class StoreType(DjangoObjectType):
 		model = Store
 
 
+class AggregatedInOutFlow(graphene.ObjectType):
+	inflow = graphene.Float()
+	outflow = graphene.Float()
+	diff = graphene.Float()
+
+
 class StoreInputType(graphene.InputObjectType):
 	amount = graphene.Float()
 	record_type = graphene.String()
@@ -23,6 +29,7 @@ class StorePaginatorType(graphene.ObjectType):
 	page_data = graphene.List(StoreType)
 	num_pages = graphene.Int()
 	total_count = graphene.Int()
+	aggregate = graphene.Field(AggregatedInOutFlow)
 
 
 class MonthType(graphene.ObjectType):

@@ -3,7 +3,7 @@ from django.db import connection
 from graphene import AbstractType
 from django.db.models import Q
 from graphql_jwt.decorators import login_required
-from app_utils.helpers import paginate_data, PAGINATION_DEFAULT, dict_fetchall
+from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out
 from app_utils.model_types.store import StorePaginatorType, \
 	MonthType, StoreRatioType
 from apps.stores.models import Store
@@ -26,9 +26,6 @@ class StoreQuery(AbstractType):
 
 	@login_required
 	def resolve_stores(self, info, search=None, store_type='use', **kwargs):
-		page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
-		page_number = kwargs.get('page_number', PAGINATION_DEFAULT['page_number'])
-
 		user = info.context.user
 		search_filter = Q(record_type=store_type)
 		if search:
@@ -37,7 +34,8 @@ class StoreQuery(AbstractType):
 			)
 		stores = User.get_user_stores(user).filter(search_filter)
 
-		paginated_result = paginate_data(stores, page_count, page_number)
+		paginated_result = paginate_data(stores, kwargs.get('page_count'), kwargs.get('page_number'))
+		paginated_result['aggregate'] = get_aggregated_in_out(stores)
 		return paginated_result
 
 	@login_required

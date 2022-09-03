@@ -81,7 +81,7 @@ class LoginUser(graphene.Mutation):
 			raise GraphQLError('Invalid credentials')
 		user = get_model_object(User, 'email', email)
 		if not user.is_verified:
-			raise GraphQLError('Create a new password first')
+			raise GraphQLError('Create a new password first', user_auth)
 		update_last_login(sender=User, user=user)
 		# user_payload = jwt_payload(user_auth)
 		token = get_token(user)
@@ -123,17 +123,22 @@ class ResetPassword(graphene.Mutation):
 		old_password = graphene.String()
 		new_password = graphene.String()
 
-	def mutate(self, _info, email, old_password, new_password,  **kwargs):
+	def mutate(self, info, email, old_password, new_password,  **kwargs):
 		if old_password == new_password:
 			raise GraphQLError('You cannot set the same password')
 		user_auth = authenticate(email=email, password=old_password)
 		if not user_auth:
 			raise GraphQLError('Oops, we dont know you!!')
+		if not user_auth.is_active:
+			raise GraphQLError('Oops, you are not allowed to perform this action.')
 
 		user = get_model_object(User, 'email', email)
 		user.is_verified = True
 		user.set_password(new_password)
 		user.save()
+
+		if info.context.user.is_anonymous is False:
+			Token.objects.filter(user=info.context.user).delete()
 
 		return ResetPassword(message='Success')
 

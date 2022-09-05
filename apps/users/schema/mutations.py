@@ -22,8 +22,6 @@ class RegisterUser(graphene.Mutation):
 	class Arguments:
 		email = graphene.String()
 		phone = graphene.String()
-		first_name = graphene.String()
-		last_name = graphene.String()
 		user_name = graphene.String()
 		password = graphene.String()
 

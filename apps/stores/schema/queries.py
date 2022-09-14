@@ -13,7 +13,10 @@ from apps.users.models import User
 class StoreQuery(AbstractType):
 	stores = graphene.Field(
 		StorePaginatorType,
-		search=graphene.String(),
+		search_key=graphene.String(),
+		search_date_from=graphene.String(),
+		search_date_to=graphene.String(),
+		search_type=graphene.String(),
 		page_count=graphene.Int(),
 		page_number=graphene.Int(),
 		store_type=graphene.String()
@@ -25,13 +28,17 @@ class StoreQuery(AbstractType):
 	store_aggregate = graphene.Field(StoreRatioType, store_type=graphene.String())
 
 	@login_required
-	def resolve_stores(self, info, search=None, store_type='use', **kwargs):
+	def resolve_stores(self, info, search_key="", search_type='use', search_date_from="", search_date_to="", **kwargs):
 		user = info.context.user
-		search_filter = Q(record_type=store_type)
-		if search:
-			search_filter = (
-					Q(amount__icontains=search) | Q(description__icontains=search)
+		search_filter = Q(record_type=search_type)
+
+		if search_key != "":
+			search_filter &= (
+					Q(amount__icontains=search_key) | Q(description__icontains=search_key)
 			)
+		if search_date_from != "" and search_date_to != "":
+			search_filter &= Q(action_date__range=(search_date_from, search_date_to))
+
 		stores = User.get_user_stores(user).filter(search_filter)
 
 		paginated_result = paginate_data(stores, kwargs.get('page_count'), kwargs.get('page_number'))

@@ -24,7 +24,7 @@ class StoreQuery(AbstractType):
 	total_inflow = graphene.Int(store_type=graphene.String())
 	total_outflow = graphene.Int(store_type=graphene.String())
 	store_count = graphene.Int()
-	monthly_store = graphene.List(MonthType, is_inflow=graphene.Boolean())
+	monthly_store = graphene.List(MonthType, is_inflow=graphene.Boolean(), time=graphene.String())
 	store_aggregate = graphene.Field(StoreRatioType, store_type=graphene.String())
 
 	@login_required
@@ -61,25 +61,38 @@ class StoreQuery(AbstractType):
 		return User.get_user_stores(user).count()
 
 	@login_required
-	def resolve_monthly_store(self, info, is_inflow=False):
+	def resolve_monthly_store(self, info, is_inflow=False, time='2_years'):
 		user = info.context.user
 		table_name = Store._meta.db_table
+		date_condition = "action_date > (CURRENT_DATE - INTERVAL '24 months')"
+		custom_column = "date_trunc('month', action_date)"
+		column_label = f"""to_char({custom_column}, 'Mon, YYYY')"""
+		if time == '1_year':
+			date_condition = "action_date > (CURRENT_DATE - INTERVAL '12 months')"
+		if time == 'last_year':
+			date_condition = "action_date >= date_trunc('year', CURRENT_DATE - interval '1' YEAR)"
+			date_condition += " AND action_date < date_trunc('year', CURRENT_DATE)"
+		if time == 'current_year':
+			date_condition = 'extract (year FROM action_date) = extract (year FROM CURRENT_DATE)'
+		if time == 'last_month':
+			custom_column = 'action_date'
+			column_label = f"""to_char({custom_column}, 'Mon-DD')"""
+			date_condition = "action_date >= date_trunc('month', CURRENT_DATE - interval '1' MONTH)"
+			date_condition += " AND action_date < date_trunc('month', CURRENT_DATE)"
+		if time == 'current_month':
+			custom_column = 'action_date'
+			column_label = f"""to_char({custom_column}, 'Mon-DD')"""
+			date_condition = 'extract (month FROM action_date) = extract (month FROM CURRENT_DATE)'
+			date_condition += ' AND extract (year FROM action_date) = extract (year FROM CURRENT_DATE)'
 		pg_query = \
 			f"""
-			SELECT to_char(date_trunc('month', action_date), 'Mon, YYYY') AS label,
-			SUM(amount) AS value
-			FROM {table_name} WHERE action_date > (current_date - INTERVAL '24 months') AND
-			user_id='{user.id}' AND is_inflow={is_inflow}
-			GROUP BY date_trunc('month', action_date)
-			ORDER BY date_trunc('month', action_date) DESC;
+			SELECT {column_label} AS label, SUM(amount) AS value
+			FROM {table_name} WHERE user_id='{user.id}' AND is_inflow={is_inflow} AND {date_condition}
+			GROUP BY {custom_column}
+			ORDER BY {custom_column} DESC;
 			"""
 		mysql_query = \
 			f"""
-			SELECT id, DATE_FORMAT(action_date, '%%b, %%Y') AS label,
-			SUM(amount) AS value
-			FROM {table_name} WHERE user_id='{user.id}' AND is_inflow={is_inflow}
-			GROUP BY label, year(action_date)
-			ORDER BY action_date DESC
 			"""
 		query = pg_query if connection.vendor == 'postgresql' else mysql_query
 

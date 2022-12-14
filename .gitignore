@@ -137,6 +137,7 @@ db.cnf
 
 #Remove static
 static/
+django_static/
 __app_backups/
 
 .DS_Store

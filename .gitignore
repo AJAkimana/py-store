@@ -138,3 +138,5 @@ db.cnf
 #Remove static
 static/
 __app_backups/
+
+.DS_Store

@@ -9,6 +9,10 @@ from apps.stores.views import StoreView, MigrateStoreView
 
 core_schema_view = include_docs_urls(title='D2DStore API')
 
+admin.site.site_header = "Day-To-Day Store Admin"
+admin.site.site_title = "Day-To-Day Store Admin Portal"
+admin.site.index_title = "Welcome to Day-To-Day Store Portal"
+
 router = routers.DefaultRouter()
 router.register('', StoreView)
 

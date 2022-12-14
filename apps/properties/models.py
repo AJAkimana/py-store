@@ -19,6 +19,7 @@ class Property(BaseModel):
 		db_table = "properties"
 		ordering = ['name']
 		unique_together = ['name', 'owner']
+		verbose_name_plural = "Properties"
 
 
 class PropDetail(BaseModel):
@@ -33,3 +34,4 @@ class PropDetail(BaseModel):
 	class Meta:
 		ordering = ['title']
 		db_table = "property_details"
+		verbose_name_plural = "Property Details"

@@ -182,7 +182,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-STATIC_ROOT = os.getenv('ROOT_STATIC_DI', '')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 STATIC_URL = '/assets/'
 STATICFILES_DIRS = [
   os.getenv('ROOT_STATIC_DI', '')
@@ -199,7 +199,7 @@ DBBACKUP_STORAGE_OPTIONS = {
 }
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
 CRONJOBS = [
-  ('0 0 * * 0', 'api.cron.backup_db')
+  ('0 0 * * 0', 'django.core.management.call_command', ['dbbackup'])
 ]
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)

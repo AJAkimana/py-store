@@ -21,6 +21,15 @@ class Property(BaseModel):
 		unique_together = ['name', 'owner']
 		verbose_name_plural = "Properties"
 
+	def display_detail(self):
+		"""Create a string for the property details. This is required to be displayed in Admin"""
+		inflow = sum([p_detail.amount for p_detail in self.prop_details.filter(type='in')])
+		outflow = sum([p_detail.amount for p_detail in self.prop_details.filter(type='out')])
+
+		return f"{inflow if inflow > 0 else '-'}/{outflow if outflow > 0 else '-'}"
+
+	display_detail.short_description = 'Transactions(IN/OUT)'
+
 
 class PropDetail(BaseModel):
 	title = models.CharField(max_length=255, blank=False)

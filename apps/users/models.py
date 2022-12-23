@@ -69,3 +69,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 	def get_properties_total_value(self, active='all'):
 		total = sum([prop.price for prop in self.get_user_properties(active=active)])
 		return total
+
+	def get_user_recurring_stores(self, filters):
+		return self.recurring_stores.filter(filters)

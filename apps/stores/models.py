@@ -27,3 +27,12 @@ class Store(BaseModel):
 
 	def __str__(self):
 		return f"{self.description} Amount: {self.amount}"
+
+
+class RecurringStore(BaseModel):
+	name = models.CharField(max_length=200)
+	user = models.ForeignKey(User, related_name='recurring_stores', on_delete=models.PROTECT)
+
+	class Meta:
+		db_table = 'recurring_stores'
+		unique_together = ['name', 'user']

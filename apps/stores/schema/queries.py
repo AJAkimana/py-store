@@ -5,8 +5,8 @@ from django.db.models import Q
 from graphql_jwt.decorators import login_required
 from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out
 from app_utils.model_types.store import StorePaginatorType, \
-	MonthType, StoreRatioType
-from apps.stores.models import Store
+	MonthType, StoreRatioType, RecurringStorePaginatorType
+from apps.stores.models import Store, RecurringStore
 from apps.users.models import User
 
 
@@ -26,6 +26,10 @@ class StoreQuery(AbstractType):
 	store_count = graphene.Int()
 	monthly_store = graphene.List(MonthType, is_inflow=graphene.Boolean(), time=graphene.String())
 	store_aggregate = graphene.Field(StoreRatioType, store_type=graphene.String())
+	recurring_stores = graphene.Field(
+		RecurringStorePaginatorType,
+		search_key=graphene.Argument(graphene.String, required=False),
+	)
 
 	@login_required
 	def resolve_stores(self, info, search_key="", search_type='use', search_date_from="", search_date_to="", **kwargs):
@@ -34,7 +38,7 @@ class StoreQuery(AbstractType):
 
 		if search_key != "":
 			search_filter &= (
-					Q(amount__icontains=search_key) | Q(description__icontains=search_key)
+				Q(amount__icontains=search_key) | Q(description__icontains=search_key)
 			)
 		if search_date_from != "" and search_date_to != "":
 			search_filter &= Q(action_date__range=(search_date_from, search_date_to))
@@ -108,3 +112,13 @@ class StoreQuery(AbstractType):
 		aggregate = User.get_store_aggregate(user, store_type)
 
 		return aggregate
+
+	@login_required
+	def resolve_recurring_stores(self, info, search_key):
+		user = info.context.user
+		filters = Q(name__icontains=search_key)
+		stores = User.get_user_recurring_stores(user, filters)
+
+		paginated_result = paginate_data(stores, page_count=10, page_number=1)
+		return paginated_result
+

@@ -2,12 +2,17 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from apps.manage_system.models import Salary
-from apps.stores.models import Store
+from apps.stores.models import Store, RecurringStore
 
 
 class StoreType(DjangoObjectType):
 	class Meta:
 		model = Store
+
+
+class RecurringStoreType(DjangoObjectType):
+	class Meta:
+		model = RecurringStore
 
 
 class AggregatedInOutFlow(graphene.ObjectType):
@@ -30,6 +35,12 @@ class StorePaginatorType(graphene.ObjectType):
 	num_pages = graphene.Int()
 	total_count = graphene.Int()
 	aggregate = graphene.Field(AggregatedInOutFlow)
+
+
+class RecurringStorePaginatorType(graphene.ObjectType):
+	page_data = graphene.List(RecurringStoreType)
+	num_pages = graphene.Int()
+	total_count = graphene.Int()
 
 
 class MonthType(graphene.ObjectType):

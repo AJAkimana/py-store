@@ -3,10 +3,10 @@ from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, superuser_required
 
 from app_utils.constants import STORE_CHOICES
-from app_utils.database import get_model_object, SaveContextManager
+from app_utils.database import get_model_object
 from app_utils.validations.validate_store import ValidateStore
 from apps.properties.models import PropDetail
-from apps.stores.models import Store
+from apps.stores.models import Store, RecurringStore
 from app_utils.model_types.store import StoreInputType, StoreType
 
 
@@ -21,6 +21,7 @@ class CreateEditStore(graphene.Mutation):
 		is_inflow = graphene.Boolean(required=True)
 		action_date = graphene.Date(required=True)
 		description = graphene.String(required=True)
+		is_recurring = graphene.Boolean(required=False)
 
 	def mutate(self, into, **kwargs):
 		pass
@@ -37,6 +38,9 @@ class CreateStore(CreateEditStore):
 		validator = ValidateStore(**kwargs)
 
 		new_store = validator.validate_and_save_store(store)
+
+		if kwargs['is_recurring']:
+			RecurringStore.objects.get_or_create(user=user, name=kwargs['description'])
 		return CreateStore(message='Successfully saved', store=new_store)
 
 

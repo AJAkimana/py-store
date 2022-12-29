@@ -35,4 +35,5 @@ class RecurringStore(BaseModel):
 
 	class Meta:
 		db_table = 'recurring_stores'
+		ordering = ['name']
 		unique_together = ['name', 'user']

@@ -1,15 +1,19 @@
 from django.db import models
-from d2dstore.models import BaseModel
+
 from apps.users.models import User
+from d2dstore.models import BaseModel
 
 
-class House(BaseModel):
+class Household(BaseModel):
 	name = models.CharField(blank=False, max_length=255, default='Our house')
-	user = models.ForeignKey(User, related_name='owner', on_delete=models.PROTECT)
+	description = models.CharField(
+		blank=False, max_length=255, default='Our family')
+	members = models.ManyToManyField(
+		'self', related_name='house_members', symmetrical=False, through='household_members.HouseholdMember')
 
 	def __str__(self):
 		return self.name
 
 	class Meta:
-		db_table = "houses"
+		db_table = "households"
 		ordering = ['name']

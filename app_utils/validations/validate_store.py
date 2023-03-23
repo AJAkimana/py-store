@@ -20,6 +20,9 @@ class ValidateStore:
     """
 		property_id = self.store.pop('property_id', None)
 		store_id = self.store.get('id', None)
+		amount = self.store.get('amount', "")
+		if amount <= 0:
+			raise GraphQLError(f"Invalid amount")
 		for key, value in self.store.items():
 			if isinstance(value, str) and value.strip() == '':
 				raise GraphQLError(f"The {key} field can't be empty")

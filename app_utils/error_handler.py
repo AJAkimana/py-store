@@ -1,7 +1,7 @@
 from graphql import GraphQLError
 
 
-class ErrorHandler():
+class ErrorHandler:
     '''Raise errors'''
 
     def check_conflict(self, model, field, value, error_type=None):

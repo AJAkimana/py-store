@@ -6,8 +6,8 @@ class BaseQuerySet(models.QuerySet):
     """
     Custom queryset for BaseModel
     """
-    def delete(self, user=None):
-        return super().update(deleted_at=timezone.now(), deleted_by=user)
+    def delete(self):
+        return super().update(deleted_at=timezone.now())
 
     def hard_delete(self):
         return super().delete()

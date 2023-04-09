@@ -1,8 +1,10 @@
+import re
 import uuid
-from django.db import models
+from django.db import models, IntegrityError, DatabaseError, OperationalError
 from django.utils import timezone
 
-from apps.users.models import User
+# from app_utils.error_handler import errors
+# from apps.users.models import User
 from d2dstore.manager import BaseManager
 
 
@@ -22,7 +24,7 @@ class BaseModel(models.Model):
 	created_at = models.DateTimeField(default=timezone.now, null=True)
 	updated_at = models.DateTimeField(default=timezone.now, null=True)
 	deleted_at = models.DateTimeField(blank=True, null=True)
-	deleted_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
+	# deleted_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
 
 	objects = BaseManager()
 	all_objects = BaseManager(alive_only=False)
@@ -30,10 +32,8 @@ class BaseModel(models.Model):
 	class Meta:
 		abstract = True
 
-	def delete(self, user=None):
+	def delete(self):
 		self.deleted_at = timezone.now()
-		if user is not None:
-			self.deleted_by = user
 		self.save()
 
 	def hard_delete(self):

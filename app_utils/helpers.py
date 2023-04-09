@@ -1,10 +1,7 @@
 import os
-# import jwt
-
 from django.core.paginator import Paginator
+from django.db.models import Q
 from rest_framework.response import Response
-# from datetime import datetime
-# from graphql_jwt.settings import jwt_settings
 
 PAGINATION_DEFAULT = {
 	"page_number": 1,
@@ -125,3 +122,21 @@ def get_aggregated_in_out(stores=[]):
 			outflow += store.amount
 
 	return {'inflow': inflow, 'outflow': outflow, 'diff': inflow - outflow}
+
+
+def get_stores_filter(**filters):
+	search_key = filters.get('search_key', '')
+	search_type = filters.get('search_type', 'use')
+	search_date_from = filters.get('search_date_from', '')
+	search_date_to = filters.get('search_date_to', '')
+
+	search_filter = Q(record_type=search_type)
+
+	if search_key != "":
+		search_filter &= (
+			Q(amount__icontains=search_key) | Q(description__icontains=search_key)
+		)
+	if search_date_from != "" and search_date_to != "":
+		search_filter &= Q(action_date__range=(search_date_from, search_date_to))
+
+	return search_filter

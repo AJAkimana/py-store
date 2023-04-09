@@ -153,7 +153,7 @@ class LogoutUser(graphene.Mutation):
 		return LogoutUser(message='Success')
 
 
-class UserMutation(graphene.ObjectType):
+class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
 	update_user_profile = UpdateUserProfile.Field()

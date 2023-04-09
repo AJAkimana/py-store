@@ -1,6 +1,8 @@
 import graphene
 from graphene_django import DjangoObjectType
 
+from apps.household_members.models import HouseholdMember
+from apps.households.models import Household
 from apps.manage_system.models import Salary
 from apps.stores.models import Store, RecurringStore
 
@@ -13,6 +15,16 @@ class StoreType(DjangoObjectType):
 class RecurringStoreType(DjangoObjectType):
 	class Meta:
 		model = RecurringStore
+
+
+class HouseholdType(DjangoObjectType):
+	class Meta:
+		model = Household
+
+
+class HouseholdMemberType(DjangoObjectType):
+	class Meta:
+		model = HouseholdMember
 
 
 class AggregatedInOutFlow(graphene.ObjectType):
@@ -39,6 +51,12 @@ class StorePaginatorType(graphene.ObjectType):
 
 class RecurringStorePaginatorType(graphene.ObjectType):
 	page_data = graphene.List(RecurringStoreType)
+	num_pages = graphene.Int()
+	total_count = graphene.Int()
+
+
+class HouseholdPaginatorType(graphene.ObjectType):
+	page_data = graphene.List(HouseholdType)
 	num_pages = graphene.Int()
 	total_count = graphene.Int()
 

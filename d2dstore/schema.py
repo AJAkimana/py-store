@@ -1,11 +1,14 @@
 import graphene
 import graphql_jwt
+
+from apps.households.schema.mutations import HouseholdMutations
+from apps.households.schema.queries import HouseholdQuery
 from apps.manage_system.schema.mutations import ManageSystemMutations
 from apps.stores.schema.queries import StoreQuery
 from apps.properties.schema.queries import PropertyQuery
 from apps.properties.schema.mutations import PropertyMutations
-from apps.stores.schema.mutations import StoreMutation
-from apps.users.schema.mutations import UserMutation
+from apps.stores.schema.mutations import StoreMutations
+from apps.users.schema.mutations import UserMutations
 from apps.users.schema.queries import UserQuery
 from apps.manage_system.schema.queries import ManageSystemQuery
 
@@ -15,16 +18,18 @@ class AppQuery(
 	StoreQuery,
 	PropertyQuery,
 	ManageSystemQuery,
+	HouseholdQuery,
 	graphene.ObjectType
 ):
 	pass
 
 
 class AppMutations(
-	StoreMutation,
-	UserMutation,
+	StoreMutations,
+	UserMutations,
 	PropertyMutations,
 	ManageSystemMutations,
+	HouseholdMutations,
 	graphene.ObjectType
 ):
 	token_auth = graphql_jwt.ObtainJSONWebToken.Field()

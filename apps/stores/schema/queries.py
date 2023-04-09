@@ -2,10 +2,12 @@ import graphene
 from django.db import connection
 from graphene import AbstractType
 from django.db.models import Q
+from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
-from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out
+from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out, get_stores_filter
 from app_utils.model_types.store import StorePaginatorType, \
 	MonthType, StoreRatioType, RecurringStorePaginatorType
+from apps.household_members.models import HouseholdMember
 from apps.stores.models import Store, RecurringStore
 from apps.users.models import User
 
@@ -19,7 +21,8 @@ class StoreQuery(AbstractType):
 		search_type=graphene.String(),
 		page_count=graphene.Int(),
 		page_number=graphene.Int(),
-		store_type=graphene.String()
+		store_type=graphene.String(),
+		search_member=graphene.String()
 	)
 	total_inflow = graphene.Int(store_type=graphene.String())
 	total_outflow = graphene.Int(store_type=graphene.String())
@@ -32,20 +35,28 @@ class StoreQuery(AbstractType):
 	)
 
 	@login_required
-	def resolve_stores(self, info, search_key="", search_type='use', search_date_from="", search_date_to="", **kwargs):
+	def resolve_stores(self, info, search_member='', page_count=10, page_number=10, **kwargs):
 		user = info.context.user
-		search_filter = Q(record_type=search_type)
+		search_filter = get_stores_filter(**kwargs)
+		if search_member == '':
+			stores = User.get_user_stores(user, search_filter)
+		else:
+			if search_member == 'all':
+				member = HouseholdMember.objects.filter(user=user).first()
+				if member.access_level == 1:
+					search_filter &= Q(household=member.household)
+			else:
+				household_member = HouseholdMember.objects.filter(user_id=search_member).first()
+				if household_member is None:
+					raise GraphQLError(f"The member is not found")
+				user_membership = HouseholdMember.objects.filter(user=user, household=household_member.household).first()
+				if user_membership is None:
+					raise GraphQLError(f"You are not a family member of {household_member}")
 
-		if search_key != "":
-			search_filter &= (
-				Q(amount__icontains=search_key) | Q(description__icontains=search_key)
-			)
-		if search_date_from != "" and search_date_to != "":
-			search_filter &= Q(action_date__range=(search_date_from, search_date_to))
+				search_filter &= Q(user=user_membership.user)
+			stores = Store.objects.filter(search_filter)
 
-		stores = User.get_user_stores(user).filter(search_filter)
-
-		paginated_result = paginate_data(stores, kwargs.get('page_count'), kwargs.get('page_number'))
+		paginated_result = paginate_data(stores, page_count, page_number)
 		paginated_result['aggregate'] = get_aggregated_in_out(stores)
 		return paginated_result
 

@@ -8,8 +8,8 @@ class Household(BaseModel):
 	name = models.CharField(blank=False, max_length=255, default='Our house')
 	description = models.CharField(
 		blank=False, max_length=255, default='Our family')
-	members = models.ManyToManyField(
-		'self', related_name='house_members', symmetrical=False, through='household_members.HouseholdMember')
+	created_by = models.ForeignKey(User, related_name='creator', on_delete=models.PROTECT, null=True)
+	members = models.ManyToManyField(User, through='household_members.HouseholdMember')
 
 	def __str__(self):
 		return self.name

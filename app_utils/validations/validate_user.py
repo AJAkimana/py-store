@@ -27,10 +27,12 @@ class ValidateUser:
 				continue
 			setattr(user, key, value)
 
-		filters = Q(user_name=self.user['user_name'],
-								email=self.user['email'],
-								phone=self.user['phone'],
-								_connector=Q.OR)
+		filters = Q(
+			user_name=self.user['user_name'],
+			email=self.user['email'],
+			phone=self.user['phone'],
+			_connector=Q.OR
+		)
 		if user_id:
 			filters = (~Q(id=user_id) & filters)
 

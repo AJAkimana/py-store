@@ -73,7 +73,8 @@ class StoreQuery(AbstractType):
 	@login_required
 	def resolve_store_count(self, info):
 		user = info.context.user
-		return User.get_user_stores(user).count()
+		filters = get_stores_filter()
+		return User.get_user_stores(user, filters).count()
 
 	@login_required
 	def resolve_monthly_store(self, info, is_inflow=False, time='2_years'):

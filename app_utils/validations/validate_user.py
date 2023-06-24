@@ -40,9 +40,8 @@ class ValidateUser:
 		if has_saved:
 			raise GraphQLError('User with the same info is already created')
 
-		new_user = User.objects.create_user(**self.user)
-		if not user_id:
-			new_user.is_verified = False
-			new_user.set_password = self.user.get('password')
-			new_user.save()
-		return new_user
+		if self.user.get('password', None) is not None:
+			user.set_password(self.user.get('password'))
+			user.is_verified = False
+		user.save()
+		return user

@@ -16,7 +16,7 @@ class UserQuery(graphene.AbstractType):
 		search=graphene.String(),
 		page_count=graphene.Int(),
 		page_number=graphene.Int())
-	
+
 	@login_required
 	def resolve_me(self, info, **kwargs):
 		return info.context.user
@@ -38,7 +38,6 @@ class UserQuery(graphene.AbstractType):
 		paginated_result = paginate_data(users, page_count, page_number)
 		return paginated_result
 
-	@login_required
 	def resolve_welcome(self, info, **kwargs):
 		message = 'Welcome to the D2DStore system'
 		return {'message': message}

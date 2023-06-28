@@ -23,7 +23,7 @@ jobs:
             cd ~/storePy
             git pull origin develop
             pipenv shell
-            pipenv install
+#            pipenv install
             python manage.py migrate
             exit
             sudo systemctl daemon-reload

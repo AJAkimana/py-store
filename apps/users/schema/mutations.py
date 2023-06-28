@@ -24,6 +24,7 @@ class RegisterUser(graphene.Mutation):
 		phone = graphene.String()
 		user_name = graphene.String()
 		password = graphene.String()
+		configure_household = graphene.Boolean()
 
 	@login_required
 	@superuser_required

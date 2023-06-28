@@ -1,10 +1,7 @@
 from django.db.models import Q
 from graphql import GraphQLError
 
-from app_utils.constants import STORE_CHOICES
-from app_utils.database import get_model_object, SaveContextManager
-from apps.properties.models import Property
-from apps.stores.models import Store
+from apps.households.models import Household
 from apps.users.models import User
 
 
@@ -20,17 +17,20 @@ class ValidateUser:
     Returns: new updated user after it has been saved into database
     """
 		user_id = self.user.get('id', None)
+		configure_household = self.user.get('configure_household', None)
 		for key, value in self.user.items():
+			if key == 'id' or (key == 'password' and user_id is not None):
+				continue
 			if isinstance(value, str) and value.strip() == '':
 				raise GraphQLError(f"The {key} field can't be empty")
-			if key == 'id':
-				continue
 			setattr(user, key, value)
 
-		filters = Q(user_name=self.user['user_name'],
-								email=self.user['email'],
-								phone=self.user['phone'],
-								_connector=Q.OR)
+		filters = Q(
+			user_name=self.user['user_name'],
+			email=self.user['email'],
+			phone=self.user['phone'],
+			_connector=Q.OR
+		)
 		if user_id:
 			filters = (~Q(id=user_id) & filters)
 
@@ -38,9 +38,15 @@ class ValidateUser:
 		if has_saved:
 			raise GraphQLError('User with the same info is already created')
 
-		new_user = User.objects.create_user(**self.user)
-		if not user_id:
-			new_user.is_verified = False
-			new_user.set_password = self.user.get('password')
-			new_user.save()
-		return new_user
+		if self.user.get('password', None) is not None:
+			user.set_password(self.user.get('password'))
+			user.is_verified = False
+		user.save()
+		print('Excuted', user.household_set.count(), configure_household)
+		if user.household_set.count() == 0 and configure_household:
+			new_household = Household.objects.create(
+				name=f"{user.user_name} family",
+				created_by=user,
+			)
+			new_household.members.add(user, through_defaults={'access_level': 1})
+		return user

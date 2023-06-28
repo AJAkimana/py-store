@@ -5,6 +5,10 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 
+from app_utils.constants import MEMBER_ACCESS_LEVELS
+from app_utils.database import get_model_object
+from app_utils.helpers import get_stores_filter
+# from apps.households.models import Household
 from apps.users.manager import UserManager
 
 
@@ -21,6 +25,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	is_active = models.BooleanField(default=True)
 	is_verified = models.BooleanField(default=True)
 	previous_passwords = models.TextField()
+	# household = models.ForeignKey(Household, related_name='members', on_delete=models.PROTECT, null=True)
 	created_at = models.DateTimeField(auto_now_add=True, null=True)
 	updated_at = models.DateTimeField(auto_now=True, null=True)
 
@@ -38,8 +43,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 	def get_previous_passwords(self):
 		return self.previous_passwords.split(',')
 
-	def get_user_stores(self):
-		return self.stores.all()
+	def get_user_stores(self, filters):
+		return self.stores.filter(filters)
 
 	def get_store_total_amount(self, store_type='use', is_inflow=True):
 		store_filter = (Q(record_type=store_type, is_inflow=is_inflow))

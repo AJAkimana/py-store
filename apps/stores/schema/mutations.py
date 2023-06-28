@@ -5,6 +5,7 @@ from graphql_jwt.decorators import login_required, superuser_required
 from app_utils.constants import STORE_CHOICES
 from app_utils.database import get_model_object
 from app_utils.validations.validate_store import ValidateStore
+from apps.households.models import Household
 from apps.properties.models import PropDetail
 from apps.stores.models import Store, RecurringStore
 from app_utils.model_types.store import StoreInputType, StoreType
@@ -22,6 +23,7 @@ class CreateEditStore(graphene.Mutation):
 		action_date = graphene.Date(required=True)
 		description = graphene.String(required=True)
 		is_recurring = graphene.Boolean(required=False)
+		household_id = graphene.String(required=True)
 
 	def mutate(self, into, **kwargs):
 		pass
@@ -34,7 +36,9 @@ class CreateStore(CreateEditStore):
 	@login_required
 	def mutate(self, info, **kwargs):
 		user = info.context.user
-		store = Store(user=user)
+
+		household = get_model_object(Household, 'id', kwargs['household_id'])
+		store = Store(user=user, household=household)
 		validator = ValidateStore(**kwargs)
 
 		new_store = validator.validate_and_save_store(store)
@@ -122,7 +126,7 @@ class MigrateStoreProperties(graphene.Mutation):
 		return MigrateStoreProperties(message=f"{len(stores)} stores successfully migrated")
 
 
-class StoreMutation(graphene.ObjectType):
+class StoreMutations(graphene.ObjectType):
 	create_store = CreateStore.Field()
 	update_store = UpdateStore.Field()
 	create_many_stores = CreateManyStores.Field()

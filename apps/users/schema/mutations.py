@@ -24,6 +24,7 @@ class RegisterUser(graphene.Mutation):
 		phone = graphene.String()
 		user_name = graphene.String()
 		password = graphene.String()
+		configure_household = graphene.Boolean()
 
 	@login_required
 	@superuser_required
@@ -37,8 +38,8 @@ class RegisterUser(graphene.Mutation):
 
 class UpdateRegisteredUser(RegisterUser):
 	"""
-    This is a mutation used to update new users
-    """
+  This is a mutation used to update new users
+  """
 
 	class Arguments(RegisterUser.Arguments):
 		id = graphene.String(required=True)
@@ -124,7 +125,7 @@ class ResetPassword(graphene.Mutation):
 		old_password = graphene.String()
 		new_password = graphene.String()
 
-	def mutate(self, info, email, old_password, new_password,  **kwargs):
+	def mutate(self, info, email, old_password, new_password, **kwargs):
 		if old_password == new_password:
 			raise GraphQLError('You cannot set the same password')
 		user_auth = authenticate(email=email, password=old_password)
@@ -153,7 +154,7 @@ class LogoutUser(graphene.Mutation):
 		return LogoutUser(message='Success')
 
 
-class UserMutation(graphene.ObjectType):
+class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
 	update_user_profile = UpdateUserProfile.Field()

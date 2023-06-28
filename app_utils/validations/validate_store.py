@@ -5,13 +5,14 @@ from app_utils.constants import STORE_CHOICES
 from app_utils.database import get_model_object, SaveContextManager
 from apps.properties.models import Property
 from apps.stores.models import Store
+from apps.users.models import User
 
 
 class ValidateStore:
-	def __init__(self, **store_body):
+	def __init__(self, **store_body: Store):
 		self.store = store_body
 
-	def validate_and_save_store(self, store):
+	def validate_and_save_store(self, store: Store):
 		"""
     Args:
       store: The store instance
@@ -34,9 +35,11 @@ class ValidateStore:
 		if not store_type:
 			raise GraphQLError('Invalid store type')
 
-		filters = Q(action_date=self.store['action_date'],
-								description=self.store['description'],
-								user=store.user)
+		filters = Q(
+			action_date=self.store['action_date'],
+			description=self.store['description'],
+			user=store.user
+		)
 		if store_id:
 			filters = (~Q(id=store_id) & filters)
 			if store.property and not property_id:
@@ -46,8 +49,7 @@ class ValidateStore:
 		if has_saved:
 			raise GraphQLError('The record has already been recorded')
 		if property_id:
-			property = get_model_object(Property, 'id', property_id)
-			store.property = property
+			store.property = get_model_object(Property, 'id', property_id)
 
 		with SaveContextManager(store, model=Store):
 			return store

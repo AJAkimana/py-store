@@ -42,7 +42,6 @@ class ValidateUser:
 			user.set_password(self.user.get('password'))
 			user.is_verified = False
 		user.save()
-		print('Excuted', user.household_set.count(), configure_household)
 		if user.household_set.count() == 0 and configure_household:
 			new_household = Household.objects.create(
 				name=f"{user.user_name} family",

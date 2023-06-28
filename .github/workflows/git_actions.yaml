@@ -29,4 +29,4 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl restart gunicorn
             exit
-            echo "Deployment is done"
+            echo "Deployment is done!"

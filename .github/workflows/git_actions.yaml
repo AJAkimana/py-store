@@ -22,6 +22,7 @@ jobs:
           script: |
             cd ~/storePy
             git pull origin develop
+            pipenv install
             pipenv run python manage.py migrate
             sudo systemctl daemon-reload
             sudo systemctl restart gunicorn

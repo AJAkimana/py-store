@@ -16,8 +16,6 @@ class Property(BaseModel):
 	is_active = models.BooleanField(default=True)
 	household = models.ForeignKey(
 		Household, related_name='properties', on_delete=models.PROTECT, null=True)
-	household_1 = models.ForeignKey(
-		Household, related_name='new_properties', on_delete=models.PROTECT, null=True)
 
 	def __str__(self):
 		return self.name

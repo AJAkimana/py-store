@@ -25,8 +25,6 @@ class Store(BaseModel):
 		Property, related_name='stores', on_delete=models.PROTECT, null=True)
 	household = models.ForeignKey(
 		Household, related_name='stores', on_delete=models.PROTECT, null=True)
-	household_1 = models.ForeignKey(
-		Household, related_name='prop_stores', on_delete=models.PROTECT, null=True)
 
 	class Meta:
 		db_table = "stores"

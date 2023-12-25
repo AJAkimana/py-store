@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class HouseholdMembersConfig(AppConfig):
-    name = 'household_members'
+    name = 'apps.household_members'

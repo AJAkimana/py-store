@@ -4,16 +4,19 @@ from apps.users.models import User
 
 
 class UserType(DjangoObjectType):
-    class Meta:
-        model = User
-        exclude_fields = ('password', 'previous_passwords')
+	class Meta:
+		model = User
+		exclude_fields = ('password', 'previous_passwords')
 
 
 class WelcomeType(graphene.ObjectType):
-    message = graphene.String()
+	class Meta:
+		description = 'Test'
+	message = graphene.String()
+	fields = ('message')
 
 
 class PaginatorUserType(graphene.ObjectType):
-    page_data = graphene.List(UserType)
-    num_pages = graphene.Int()
-    total_count = graphene.Int()
+	page_data = graphene.List(UserType)
+	num_pages = graphene.Int()
+	total_count = graphene.Int()

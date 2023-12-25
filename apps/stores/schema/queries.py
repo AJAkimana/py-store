@@ -1,6 +1,5 @@
 import graphene
 from django.db import connection
-from graphene import AbstractType
 from django.db.models import Q
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
@@ -12,7 +11,7 @@ from apps.stores.models import Store, RecurringStore
 from apps.users.models import User
 
 
-class StoreQuery(AbstractType):
+class StoreQuery(graphene.ObjectType):
 	stores = graphene.Field(
 		StorePaginatorType,
 		search_key=graphene.String(),
@@ -109,6 +108,7 @@ class StoreQuery(AbstractType):
 			"""
 		mysql_query = \
 			f"""
+			SELECT 'D2DStore' AS project;
 			"""
 		query = pg_query if connection.vendor == 'postgresql' else mysql_query
 

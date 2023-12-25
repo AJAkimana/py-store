@@ -8,7 +8,7 @@ from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
 from apps.users.models import User
 
 
-class UserQuery(graphene.AbstractType):
+class UserQuery(graphene.ObjectType):
 	me = graphene.Field(UserType)
 	welcome = graphene.Field(WelcomeType)
 	users = graphene.Field(
@@ -39,5 +39,6 @@ class UserQuery(graphene.AbstractType):
 		return paginated_result
 
 	def resolve_welcome(self, info, **kwargs):
+		print('=============================>')
 		message = 'Welcome to the D2DStore system'
 		return {'message': message}

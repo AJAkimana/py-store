@@ -39,6 +39,5 @@ class UserQuery(graphene.ObjectType):
 		return paginated_result
 
 	def resolve_welcome(self, info, **kwargs):
-		print('=============================>')
 		message = 'Welcome to the D2DStore system'
 		return {'message': message}

@@ -53,7 +53,7 @@ INSTALLED_APPS = [
 	'apps.manage_system',
 	'dbbackup',  # django-dbbackup
 	'graphene_django',
-	'django_cron'  # For automatic job
+	'django_crontab'  # For automatic job
 ]
 
 MIDDLEWARE = [
@@ -192,9 +192,13 @@ DBBACKUP_STORAGE_OPTIONS = {
 	'oauth2_access_token': os.getenv('DROPBOX_TOKEN', ''),
 	# 'location': os.getenv('DB_BACKUP_ZONE', None)
 }
+# # DBBACKUP_FILENAME_TEMPLATE = backup_filename
+# CRONJOBS = [
+# 	('*/1 * * * *', 'app_utils.background_task.backup_filename')
+# ]
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
-CRON_CLASSES = [
-	'app_utils.background_task.BackupDb',
+CRONJOBS = [
+	('*/5 * * * *', 'app_utils.background_task.backup_filename')
 ]
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)

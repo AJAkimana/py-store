@@ -1,5 +1,4 @@
 import graphene
-from graphene import AbstractType
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, superuser_required
 
@@ -8,7 +7,7 @@ from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 
 
-class HouseholdQuery(AbstractType):
+class HouseholdQuery(graphene.ObjectType):
 	my_household_memberships = graphene.List(HouseholdMemberType)
 	households = graphene.List(HouseholdType)
 

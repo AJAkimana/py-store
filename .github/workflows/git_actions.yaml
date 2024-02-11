@@ -24,6 +24,8 @@ jobs:
             git pull origin develop
             pipenv install
             pipenv run python manage.py migrate
+            pipenv run python manage.py collectstatic
+            pipenv run python manage.py crontab add
             sudo systemctl daemon-reload
             sudo systemctl restart gunicorn
             exit

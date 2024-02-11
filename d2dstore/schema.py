@@ -1,5 +1,6 @@
 import graphene
 import graphql_jwt
+from graphene_django.debug import DjangoDebug
 
 from apps.households.schema.mutations import HouseholdMutations
 from apps.households.schema.queries import HouseholdQuery
@@ -21,7 +22,7 @@ class AppQuery(
 	HouseholdQuery,
 	graphene.ObjectType
 ):
-	pass
+	debug = graphene.Field(DjangoDebug, name="_debug")
 
 
 class AppMutations(

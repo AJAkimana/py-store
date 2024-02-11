@@ -28,14 +28,14 @@ PAGINATION_DEFAULT = {
 
 def paginate_data(data_set, page_count=PAGINATION_DEFAULT['page_count'], page_number=PAGINATION_DEFAULT['page_count']):
 	"""
-	Breaks down retrieved records into chunks per page
-	:param data_set: Query Set to be paginated
-	:param page_count: Number of records in each page.
-	:param page_number: The actual page
-	:returns a tuple of the paginated record,
-	number of pages and the total number of items
+  Breaks down retrieved records into chunks per page
+  :param data_set: Query Set to be paginated
+  :param page_count: Number of records in each page.
+  :param page_number: The actual page
+  :returns a tuple of the paginated record,
+  number of pages and the total number of items
 
-	"""
+  """
 	paginator = Paginator(data_set, page_count)
 	page_data = paginator.get_page(page_number)
 	num_pages = paginator.num_pages
@@ -76,8 +76,10 @@ def dict_fetchall(cursor):
 
 
 def backup_filename(databasename, servername, datetime, extension, content_type):
+	# import pdb
+	# pdb.set_trace()
 	backup_type = 'dev' if os.getenv('DEBUG', 'true') == 'true' else 'prod'
-	return f'D2DStore_{backup_type}-{datetime}.{extension}'
+	return f'D2DStore_{backup_type}-{datetime}.psql'
 
 
 def properties_active(is_active):
@@ -140,3 +142,30 @@ def get_stores_filter(**filters):
 		search_filter &= Q(action_date__range=(search_date_from, search_date_to))
 
 	return search_filter
+
+
+def jwt_allow_allow_any(info, **kwargs):
+	try:
+		from graphql_jwt.compat import get_operation_name
+		from graphql_jwt.settings import jwt_settings
+
+		operation_name = get_operation_name(info.operation.operation).title()
+		operation_type = info.schema.get_type(operation_name)
+
+		if hasattr(operation_type, 'fields'):
+
+			field = operation_type.fields.get(info.field_name)
+
+			if field is None:
+				return False
+
+		else:
+			return False
+
+		graphene_type = getattr(field.type, "graphene_type", None)
+
+		return graphene_type is not None and issubclass(
+			graphene_type, tuple(jwt_settings.JWT_ALLOW_ANY_CLASSES)
+		)
+	except Exception as e:
+		return False

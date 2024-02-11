@@ -7,6 +7,7 @@ from apps.stores.models import Store
 class DetailType(DjangoObjectType):
 	class Meta:
 		model = Store
+		fields = '__all__'
 
 
 class PropertyType(DjangoObjectType):
@@ -16,6 +17,7 @@ class PropertyType(DjangoObjectType):
 
 	class Meta:
 		model = Property
+		fields = '__all__'
 
 	def resolve_details_counts(self, info, **kwargs):
 		return self.stores.count()

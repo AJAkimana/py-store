@@ -8,7 +8,7 @@ from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
 from apps.users.models import User
 
 
-class UserQuery(graphene.AbstractType):
+class UserQuery(graphene.ObjectType):
 	me = graphene.Field(UserType)
 	welcome = graphene.Field(WelcomeType)
 	users = graphene.Field(

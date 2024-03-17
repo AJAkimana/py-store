@@ -53,6 +53,11 @@ class StoreInputType(graphene.InputObjectType):
 	description = graphene.String()
 
 
+class BudgetItemInputType(graphene.InputObjectType):
+	name = graphene.String()
+	amount = graphene.Float()
+
+
 class StorePaginatorType(PaginatorType):
 	page_data = graphene.List(StoreType)
 	aggregate = graphene.Field(AggregatedInOutFlow)

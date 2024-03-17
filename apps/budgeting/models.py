@@ -47,4 +47,4 @@ class BudgetItem(BaseModel):
 	class Meta:
 		db_table = "budget_items"
 		ordering = ['name']
-		unique_together = ['name', 'amount']
+		unique_together = ['name', 'amount', 'budget']

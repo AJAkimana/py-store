@@ -1,13 +1,12 @@
 import graphene
 from django.db import connection
 from django.db.models import Q
-from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out, get_stores_filter
 from app_utils.model_types.store import StorePaginatorType, \
 	MonthType, StoreRatioType, RecurringStorePaginatorType
-from apps.household_members.models import HouseholdMember
-from apps.stores.models import Store, RecurringStore
+from apps.household_members.helpers import get_member_filter
+from apps.stores.models import Store
 from apps.users.models import User
 
 
@@ -40,19 +39,7 @@ class StoreQuery(graphene.ObjectType):
 		if search_member == '':
 			stores = User.get_user_stores(user, search_filter)
 		else:
-			if search_member == 'all':
-				member = HouseholdMember.objects.filter(user=user).first()
-				if member.access_level == 1:
-					search_filter &= Q(household=member.household)
-			else:
-				household_member = HouseholdMember.objects.filter(user_id=search_member).first()
-				if household_member is None:
-					raise GraphQLError(f"The member is not found")
-				user_membership = HouseholdMember.objects.filter(user=user, household=household_member.household).first()
-				if user_membership is None:
-					raise GraphQLError(f"You are not a family member of {household_member}")
-
-				search_filter &= Q(user=user_membership.user)
+			search_filter &= get_member_filter(user, search_member)
 			stores = Store.objects.filter(search_filter)
 
 		paginated_result = paginate_data(stores, page_count, page_number)

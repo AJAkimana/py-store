@@ -1,7 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 
-from apps.budgeting.models import Budget
+from apps.budgeting.models import Budget, BudgetItem
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 from apps.manage_system.models import Salary
@@ -31,6 +31,11 @@ class HouseholdMemberType(DjangoObjectType):
 class BudgetType(DjangoObjectType):
 	class Meta:
 		model = Budget
+
+
+class BudgetItemType(DjangoObjectType):
+	class Meta:
+		model = BudgetItem
 
 
 class PaginatorType(graphene.ObjectType):

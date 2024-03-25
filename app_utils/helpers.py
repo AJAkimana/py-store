@@ -156,7 +156,7 @@ def get_budgets_filter(**filters):
 			Q(amount__icontains=search_key) | Q(name__icontains=search_key)
 		)
 	if search_start_date != "" and search_end_date != "":
-		search_filter &= Q(action_date__range=(search_start_date, search_end_date))
+		search_filter &= Q(start_date__range=(search_start_date, search_end_date))
 
 	return search_filter
 

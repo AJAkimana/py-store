@@ -9,6 +9,7 @@ from d2dstore.models import BaseModel
 
 class Budget(BaseModel):
 	name = models.CharField(blank=False, max_length=50)
+	description = models.CharField(blank=False, max_length=200, null=True)
 	status = models.CharField(
 		max_length=20,
 		choices=BUDGET_STATUSES,
@@ -40,7 +41,7 @@ class BudgetItem(BaseModel):
 	amount = models.FloatField()
 	budget = models.ForeignKey(
 		Budget,
-		related_name='budgets',
+		related_name='budget_items',
 		on_delete=models.PROTECT
 	)
 

@@ -25,12 +25,12 @@ class ValidateBudget:
 				continue
 			setattr(budget, key, value)
 
-		status = [item for item in BUDGET_STATUSES if item[0] == self.budget['record_type']]
+		status = [item for item in BUDGET_STATUSES if item[0] == self.budget['status']]
 		if not status:
 			raise GraphQLError('Invalid budget status')
 
 		filters = Q(
-			action_date=self.budget['name'],
+			name=self.budget['name'],
 			user=budget.user
 		)
 		if budget_id:

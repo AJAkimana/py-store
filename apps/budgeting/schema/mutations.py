@@ -2,18 +2,18 @@ import graphene
 from graphql_jwt.decorators import login_required
 
 from app_utils.database import get_model_object
-from app_utils.model_types.store import BudgetItemInputType
+from app_utils.model_types.store import BudgetItemInputType, BudgetType
 from app_utils.validations.validate_budget import ValidateBudget
-from apps.budgeting.models import Budget
+from apps.budgeting.models import Budget, BudgetItem
 from apps.households.models import Household
 
 
 class CreateEditBudget(graphene.Mutation):
 	message = graphene.String()
-	budget = graphene.Field(Budget)
+	budget = graphene.Field(BudgetType)
 
 	class Arguments:
-		name = graphene.Float(required=True)
+		name = graphene.String(required=True)
 		status = graphene.String(required=False)
 		start_date = graphene.Date(required=True)
 		end_date = graphene.Date(required=True)
@@ -73,11 +73,12 @@ class CreateBudgetItems(graphene.Mutation):
 		not_saved = 0
 
 		for item in kwargs['items']:
-			has_saved = Budget.objects.filter(
-				action_date=item['name'],
-				description=item['amount'], budget=budget).first()
+			has_saved = BudgetItem.objects.filter(
+				name=item['name'],
+				amount=item['amount'], budget=budget).first()
 			if not has_saved:
-				Budget(**item).save()
+				item['budget_id'] = kwargs['budget_id']
+				BudgetItem(**item).save()
 				saved += 1
 			else:
 				not_saved += 1

@@ -30,7 +30,7 @@ class ValidateBudget:
 			raise GraphQLError('Invalid budget status')
 
 		filters = Q(
-			name=self.budget['name'],
+			name=budget.name if budget.name else self.budget['name'],
 			user=budget.user
 		)
 		if budget_id:

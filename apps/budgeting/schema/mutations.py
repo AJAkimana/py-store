@@ -1,4 +1,5 @@
 import graphene
+from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
 from app_utils.database import get_model_object
@@ -47,12 +48,18 @@ class UpdateBudget(CreateEditBudget):
 	"""
 	class Arguments(CreateEditBudget.Arguments):
 		id = graphene.String(required=True)
+		name = graphene.String(required=False)
+		start_date = graphene.Date(required=False)
+		end_date = graphene.Date(required=False)
+		household_id = graphene.String(required=False)
 
 	@login_required
 	def mutate(self, info, **kwargs):
 		budget = get_model_object(Budget, 'id', kwargs.get('id'))
 		validator = ValidateBudget(**kwargs)
 
+		# if budget.status == 'approved' and budget.budget_items == 0:
+		# 	raise GraphQLError('Add at least one item')
 		updated_budget = validator.validate_and_save(budget)
 		return UpdateBudget(message='Successfully update', budget=updated_budget)
 
@@ -72,6 +79,8 @@ class CreateBudgetItems(graphene.Mutation):
 		saved = 0
 		not_saved = 0
 
+		if budget.status == 'approved':
+			raise GraphQLError("You can add items to the approved budget")
 		for item in kwargs['items']:
 			has_saved = BudgetItem.objects.filter(
 				name=item['name'],

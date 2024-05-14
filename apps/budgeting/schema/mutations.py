@@ -58,8 +58,8 @@ class UpdateBudget(CreateEditBudget):
 		budget = get_model_object(Budget, 'id', kwargs.get('id'))
 		validator = ValidateBudget(**kwargs)
 
-		# if budget.status == 'approved' and budget.budget_items == 0:
-		# 	raise GraphQLError('Add at least one item')
+		if budget.status == 'approved' and len(budget.budget_items) == 0:
+			raise GraphQLError('Add at least one item')
 		updated_budget = validator.validate_and_save(budget)
 		return UpdateBudget(message='Successfully update', budget=updated_budget)
 

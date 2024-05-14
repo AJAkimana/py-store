@@ -1,4 +1,7 @@
+from datetime import date
+
 import graphene
+from django.db.models import Q
 from graphql_jwt.decorators import login_required
 
 from app_utils.database import get_model_object
@@ -19,7 +22,7 @@ class BudgetingQuery(graphene.ObjectType):
 		page_number=graphene.Int(),
 		search_member=graphene.String()
 	)
-	budget_details = graphene.Field(BudgetType, budget_id=graphene.String(required=True))
+	current_budget = graphene.Field(BudgetType, budget_id=graphene.String())
 
 	@login_required
 	def resolve_budgets(self, info, search_member='', page_count=10, page_number=10, **kwargs):
@@ -34,9 +37,15 @@ class BudgetingQuery(graphene.ObjectType):
 		return paginate_data(budgets, page_count, page_number)
 
 	@login_required
-	def resolve_budget_details(self, info, budget_id=''):
+	def resolve_current_budget(self, info, budget_id=''):
 		user = info.context.user
-		budget = get_model_object(Budget, 'id', budget_id)
-		# Add budget validation
+		search_filter = Q(user=user)
+		if budget_id is not '':
+			search_filter &= Q(id=budget_id)
+		else:
+			today = date.today()
+			search_filter &= Q(start_date__lte=today, end_date__gte=today, status='approved')
+
+		budget = Budget.objects.filter(search_filter).first()
 
 		return budget

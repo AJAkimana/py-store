@@ -1,15 +1,16 @@
 import re
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction, IntegrityError, DatabaseError, OperationalError
+from django.db import transaction, IntegrityError, DatabaseError, OperationalError, connection
 from graphql import GraphQLError
 
 from .common_messages import ERROR_MESSAGES
 from .error_handler import errors
+from .helpers import dict_fetchall
 
 
 class SaveContextManager:
-    """
+	"""
        Manage database exceptions during saving and updating actions.
 
        Args:
@@ -28,61 +29,61 @@ class SaveContextManager:
            error: Else expection is raised with appropriate message.
        """
 
-    def __init__(self, model_instance, **kwargs):
-        self.model_instance = model_instance
-        self.model = kwargs.get('model', None)
-        self.field = kwargs.get('field', None)
-        self.value = kwargs.get('value', None)
-        self.message = kwargs.get('message', None)
-        self.error = kwargs.get('error', None)
+	def __init__(self, model_instance, **kwargs):
+		self.model_instance = model_instance
+		self.model = kwargs.get('model', None)
+		self.field = kwargs.get('field', None)
+		self.value = kwargs.get('value', None)
+		self.message = kwargs.get('message', None)
+		self.error = kwargs.get('error', None)
 
-    def __enter__(self):
-        soft_deleted = True
-        while soft_deleted:
-            try:
-                with transaction.atomic():
-                    self.model_instance.save()
-                    soft_deleted = False
-                return self.model_instance
-            except IntegrityError as e:
-                if self.field is None and self.value is None:
-                    self.field, self.value = self.get_model_value(str(e))
-                if 'violates foreign key constraint' in str(e):
-                    model_name = re.findall(
-                        r'[table\s]"[a-zA-Z_]+',
-                        str(e))[-1].split('_')[-1].capitalize()
-                    errors.db_object_do_not_exists(
-                        model_name, 'id', self.value, error_type=self.error)
-                object_in_db = self.model.all_objects.get(
-                    **{self.field: self.value})
-                if object_in_db.deleted_at is None:
-                    if self.message is not None:
-                        errors.custom_message(
-                            self.message, error_type=self.error)
-                    errors.check_conflict(
-                        self.model.__name__, self.field, self.value,
-                        error_type=self.error
-                    )
-                new_value = f'{self.value}_{str(object_in_db.deleted_at)}'
-                setattr(object_in_db, self.field, new_value)
-                object_in_db.save()
-                self.field = self.value = None
-            except (DatabaseError, OperationalError) as e:
-                message = f'Something went wrong, {str(e)}'
-                errors.custom_message(message, error_type=self.error)
+	def __enter__(self):
+		soft_deleted = True
+		while soft_deleted:
+			try:
+				with transaction.atomic():
+					self.model_instance.save()
+					soft_deleted = False
+				return self.model_instance
+			except IntegrityError as e:
+				if self.field is None and self.value is None:
+					self.field, self.value = self.get_model_value(str(e))
+				if 'violates foreign key constraint' in str(e):
+					model_name = re.findall(
+						r'[table\s]"[a-zA-Z_]+',
+						str(e))[-1].split('_')[-1].capitalize()
+					errors.db_object_do_not_exists(
+						model_name, 'id', self.value, error_type=self.error)
+				object_in_db = self.model.all_objects.get(
+					**{self.field: self.value})
+				if object_in_db.deleted_at is None:
+					if self.message is not None:
+						errors.custom_message(
+							self.message, error_type=self.error)
+					errors.check_conflict(
+						self.model.__name__, self.field, self.value,
+						error_type=self.error
+					)
+				new_value = f'{self.value}_{str(object_in_db.deleted_at)}'
+				setattr(object_in_db, self.field, new_value)
+				object_in_db.save()
+				self.field = self.value = None
+			except (DatabaseError, OperationalError) as e:
+				message = f'Something went wrong, {str(e)}'
+				errors.custom_message(message, error_type=self.error)
 
-    def __exit__(self, exception_type, exception_value, traceback):
-        return False
+	def __exit__(self, exception_type, exception_value, traceback):
+		return False
 
-    def get_model_value(self, error):
-        field_value = re.findall(r'[0-9a-zA-Z_+\s.@]+[)=]', error)
-        field = field_value[0].replace(")", "").strip()
-        value = field_value[-1].replace(")", "").strip()
-        return field, value
+	def get_model_value(self, error):
+		field_value = re.findall(r'[0-9a-zA-Z_+\s.@]+[)=]', error)
+		field = field_value[0].replace(")", "").strip()
+		value = field_value[-1].replace(")", "").strip()
+		return field, value
 
 
 def get_model_object(model, column_name, column_value, **kwargs):
-    """
+	"""
     Gets model instance from the database by a crertain field.
 
     Args:
@@ -102,20 +103,28 @@ def get_model_object(model, column_name, column_value, **kwargs):
          any name other than id.
         error: Else expection is raised with appropriate message.
     """
-    manager_query = kwargs.get('manager_query', model.objects)
-    try:
-        if ((column_name == "id") and isinstance(column_value, int) and
-                (column_value < 1)):
-            error_message = ERROR_MESSAGES["invalid_id"].format(column_value)
-            raise GraphQLError(error_message)
-        model_instance = manager_query.get(**{column_name: column_value})
-        return model_instance
-    except ObjectDoesNotExist:
-        message = kwargs.get('message', None)
-        error_type = kwargs.get('error_type', None)
-        label = kwargs.get('label', None)
-        if message is not None:
-            errors.custom_message(message, error_type=error_type)
-        errors.db_object_do_not_exists(
-            model.__name__, column_name, column_value, error_type=error_type,
-            label=label)
+	manager_query = kwargs.get('manager_query', model.objects)
+	try:
+		if ((column_name == "id") and isinstance(column_value, int) and
+			(column_value < 1)):
+			error_message = ERROR_MESSAGES["invalid_id"].format(column_value)
+			raise GraphQLError(error_message)
+		model_instance = manager_query.get(**{column_name: column_value})
+		return model_instance
+	except ObjectDoesNotExist:
+		message = kwargs.get('message', None)
+		error_type = kwargs.get('error_type', None)
+		label = kwargs.get('label', None)
+		if message is not None:
+			errors.custom_message(message, error_type=error_type)
+		errors.db_object_do_not_exists(
+			model.__name__, column_name, column_value, error_type=error_type,
+			label=label)
+
+
+def query_runner(pg_query: str, mysql_query: str = 'select 1'):
+	query = pg_query if connection.vendor == 'postgresql' else mysql_query
+
+	with connection.cursor() as cursor:
+		cursor.execute(query)
+		return dict_fetchall(cursor)

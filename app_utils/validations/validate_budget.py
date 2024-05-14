@@ -2,7 +2,7 @@ from django.db.models import Q
 from graphql import GraphQLError
 
 from app_utils.constants import BUDGET_STATUSES
-from app_utils.database import SaveContextManager
+from app_utils.database import SaveContextManager, query_runner
 from apps.budgeting.models import Budget
 
 
@@ -29,16 +29,20 @@ class ValidateBudget:
 		if not status:
 			raise GraphQLError('Invalid budget status')
 
-		filters = Q(
-			name=budget.name if budget.name else self.budget['name'],
-			user=budget.user
-		)
+		conditions = f"""
+			user_id='{budget.user.id}' AND (
+				("start_date" BETWEEN '{budget.start_date}' AND '{budget.end_date}') OR
+				("end_date" BETWEEN '{budget.start_date}' AND '{budget.end_date}') OR
+				("start_date" < '{budget.start_date}' AND "end_date" > '{budget.end_date}')
+			)
+		"""
 		if budget_id:
-			filters = (~Q(id=budget_id) & filters)
+			conditions += f" AND id != '{budget_id}'"
+		query = f"SELECT * FROM budgets WHERE {conditions} LIMIT 1"
+		budgets = query_runner(pg_query=query)
 
-		has_saved = Budget.objects.filter(filters).first()
-		if has_saved:
-			raise GraphQLError('The record has already been recorded')
+		if len(budgets) == 1:
+			raise GraphQLError(f"""The budget should not take place in the collision date as '{budgets[0]['name']}'""")
 
 		with SaveContextManager(budget, model=Budget):
 			return budget

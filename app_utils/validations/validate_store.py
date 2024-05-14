@@ -3,6 +3,7 @@ from graphql import GraphQLError
 
 from app_utils.constants import STORE_CHOICES
 from app_utils.database import get_model_object, SaveContextManager
+from apps.budgeting.models import BudgetItem
 from apps.properties.models import Property
 from apps.stores.models import Store
 from apps.users.models import User
@@ -20,6 +21,7 @@ class ValidateStore:
     Returns: new updated store after it has been saved into database
     """
 		property_id = self.store.pop('property_id', None)
+		budget_item_id = self.store.pop('budget_item_id', None)
 		store_id = self.store.get('id', None)
 		amount = self.store.get('amount', "")
 		if amount <= 0:
@@ -44,12 +46,15 @@ class ValidateStore:
 			filters = (~Q(id=store_id) & filters)
 			if store.property and not property_id:
 				store.property = None
+			if store.budget_item and not budget_item_id:
+				store.budget_item = None
 
 		has_saved = Store.objects.filter(filters).first()
 		if has_saved:
 			raise GraphQLError('The record has already been recorded')
 		if property_id:
 			store.property = get_model_object(Property, 'id', property_id)
-
+		if budget_item_id:
+			store.budget_item = get_model_object(BudgetItem, 'id', budget_item_id)
 		with SaveContextManager(store, model=Store):
 			return store

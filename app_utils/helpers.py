@@ -144,6 +144,23 @@ def get_stores_filter(**filters):
 	return search_filter
 
 
+def get_budgets_filter(**filters):
+	search_key = filters.get('search_key', '')
+	search_start_date = filters.get('search_start_date', '')
+	search_end_date = filters.get('search_end_date', '')
+
+	search_filter = Q()
+
+	if search_key != "":
+		search_filter &= (
+			Q(amount__icontains=search_key) | Q(name__icontains=search_key)
+		)
+	if search_start_date != "" and search_end_date != "":
+		search_filter &= Q(start_date__range=(search_start_date, search_end_date))
+
+	return search_filter
+
+
 def jwt_allow_allow_any(info, **kwargs):
 	try:
 		from graphql_jwt.compat import get_operation_name

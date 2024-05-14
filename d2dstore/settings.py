@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 	'apps.household_members',
 	'apps.properties',
 	'apps.manage_system',
+	'apps.budgeting',
 	'dbbackup',  # django-dbbackup
 	'graphene_django',
 	'django_crontab'  # For automatic job

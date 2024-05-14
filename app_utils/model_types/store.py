@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 
+from apps.budgeting.models import Budget, BudgetItem
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 from apps.manage_system.models import Salary
@@ -27,6 +28,21 @@ class HouseholdMemberType(DjangoObjectType):
 		model = HouseholdMember
 
 
+class BudgetType(DjangoObjectType):
+	class Meta:
+		model = Budget
+
+
+class BudgetItemType(DjangoObjectType):
+	class Meta:
+		model = BudgetItem
+
+
+class PaginatorType(graphene.ObjectType):
+	num_pages = graphene.Int()
+	total_count = graphene.Int()
+
+
 class AggregatedInOutFlow(graphene.ObjectType):
 	inflow = graphene.Float()
 	outflow = graphene.Float()
@@ -42,23 +58,22 @@ class StoreInputType(graphene.InputObjectType):
 	description = graphene.String()
 
 
-class StorePaginatorType(graphene.ObjectType):
+class BudgetItemInputType(graphene.InputObjectType):
+	name = graphene.String()
+	amount = graphene.Float()
+
+
+class StorePaginatorType(PaginatorType):
 	page_data = graphene.List(StoreType)
-	num_pages = graphene.Int()
-	total_count = graphene.Int()
 	aggregate = graphene.Field(AggregatedInOutFlow)
 
 
-class RecurringStorePaginatorType(graphene.ObjectType):
+class RecurringStorePaginatorType(PaginatorType):
 	page_data = graphene.List(RecurringStoreType)
-	num_pages = graphene.Int()
-	total_count = graphene.Int()
 
 
-class HouseholdPaginatorType(graphene.ObjectType):
+class HouseholdPaginatorType(PaginatorType):
 	page_data = graphene.List(HouseholdType)
-	num_pages = graphene.Int()
-	total_count = graphene.Int()
 
 
 class MonthType(graphene.ObjectType):
@@ -92,7 +107,9 @@ class SalaryType(DjangoObjectType):
 	# tax = graphene.Float()
 
 
-class SalaryPaginatorType(graphene.ObjectType):
+class SalaryPaginatorType(PaginatorType):
 	page_data = graphene.List(SalaryType)
-	num_pages = graphene.Int()
-	total_count = graphene.Int()
+
+
+class BudgetPaginatorType(PaginatorType):
+	page_data = graphene.List(BudgetType)

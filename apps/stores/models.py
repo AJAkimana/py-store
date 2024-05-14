@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.timezone import now
 
+from apps.budgeting.models import BudgetItem
 from apps.households.models import Household
 from apps.properties.models import Property
 from d2dstore.models import BaseModel
@@ -25,6 +26,8 @@ class Store(BaseModel):
 		Property, related_name='stores', on_delete=models.PROTECT, null=True)
 	household = models.ForeignKey(
 		Household, related_name='stores', on_delete=models.PROTECT, null=True)
+	budget_item = models.ForeignKey(
+		BudgetItem, related_name='stores', on_delete=models.PROTECT, null=True)
 
 	class Meta:
 		db_table = "stores"

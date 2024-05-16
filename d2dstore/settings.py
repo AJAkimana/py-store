@@ -177,11 +177,11 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-STATIC_ROOT = os.path.join(BASE_DIR, 'django_static/')
-STATIC_URL = '/django_static/'
-STATICFILES_DIRS = [
-	os.getenv('ROOT_STATIC_DI', '')
-]
+# STATIC_ROOT = os.path.join(BASE_DIR, 'django_static/')
+STATIC_URL = 'django_static/'
+# STATICFILES_DIRS = [
+# 	os.getenv('ROOT_STATIC_DI', '')
+# ]
 
 # GeopIP2
 GEOIP_PATH = os.getenv('GEOIP_PATH', '')

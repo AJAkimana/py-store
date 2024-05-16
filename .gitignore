@@ -134,6 +134,7 @@ dmypy.json
 
 # Db credentials
 db.cnf
+postgres/
 
 #Remove static
 static/

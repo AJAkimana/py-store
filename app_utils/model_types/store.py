@@ -41,7 +41,7 @@ class BudgetType(DjangoObjectType):
 	def resolve_amount_spent(self, info, **kwargs):
 		amount = 0
 		for it in self.budget_items.all():
-			amount += sum([itm.amount for itm in it.stores.all()])
+			amount += sum([store.amount for store in it.stores.all()])
 		return amount
 
 
@@ -52,7 +52,7 @@ class BudgetItemType(DjangoObjectType):
 	amount_spent = graphene.Float(required=True)
 
 	def resolve_amount_spent(self, info, **kwargs):
-		return sum([it.amount for it in self.stores.all()])
+		return sum([store.amount for store in self.stores.all()])
 
 
 class PaginatorType(graphene.ObjectType):

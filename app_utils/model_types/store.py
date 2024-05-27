@@ -32,10 +32,27 @@ class BudgetType(DjangoObjectType):
 	class Meta:
 		model = Budget
 
+	amount = graphene.Float(required=True)
+	amount_spent = graphene.Float(required=True)
+
+	def resolve_amount(self, info, **kwargs):
+		return sum([it.amount for it in self.budget_items.all()])
+
+	def resolve_amount_spent(self, info, **kwargs):
+		amount = 0
+		for it in self.budget_items.all():
+			amount += sum([itm.amount for itm in it.stores.all()])
+		return amount
+
 
 class BudgetItemType(DjangoObjectType):
 	class Meta:
 		model = BudgetItem
+
+	amount_spent = graphene.Float(required=True)
+
+	def resolve_amount_spent(self, info, **kwargs):
+		return sum([it.amount for it in self.stores.all()])
 
 
 class PaginatorType(graphene.ObjectType):

@@ -49,3 +49,6 @@ class BudgetItem(BaseModel):
 		db_table = "budget_items"
 		ordering = ['name']
 		unique_together = ['name', 'amount', 'budget']
+
+	def __str__(self):
+		return f'{self.name}=>{self.amount}'

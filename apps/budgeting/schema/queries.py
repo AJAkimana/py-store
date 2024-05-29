@@ -4,7 +4,7 @@ import graphene
 from django.db.models import Q
 from graphql_jwt.decorators import login_required
 
-from app_utils.helpers import get_budgets_filter, paginate_data
+from app_utils.helpers import get_budgets_filter, paginate_data, is_valid_uuid
 from app_utils.model_types.store import BudgetPaginatorType, BudgetType
 from apps.budgeting.models import Budget
 from apps.household_members.helpers import get_member_filter
@@ -39,7 +39,7 @@ class BudgetingQuery(graphene.ObjectType):
 	def resolve_current_budget(self, info, budget_id=None):
 		user = info.context.user
 		search_filter = Q(user=user)
-		if budget_id is not None:
+		if budget_id is not None and is_valid_uuid(budget_id):
 			search_filter &= Q(id=budget_id)
 		else:
 			today = date.today()

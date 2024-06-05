@@ -39,7 +39,7 @@ class BudgetItemAdmin(BaseModelAdmin):
 	add_fieldsets = (
 		(None, {
 			'classes': ('wide',),
-			'fields': ['name', 'amount']
+			'fields': ['name', 'amount', 'budget']
 		}),
 	)
 	search_fields = ['name']

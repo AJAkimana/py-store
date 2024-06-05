@@ -31,10 +31,10 @@ class BudgetItemAdmin(BaseModelAdmin):
 	add_form = BudgetItemCreationForm
 	form = BudgetItemChangeForm
 	model = BudgetItem
-	list_display = ['name', 'amount']
+	list_display = ['name', 'amount', 'amount']
 	list_filter = ['name']
 	fieldsets = (
-		(_('Detailed Information'), {'fields': ('name', 'amount',)}),
+		(_('Detailed Information'), {'fields': ('name', 'amount', 'budget',)}),
 	)
 	add_fieldsets = (
 		(None, {

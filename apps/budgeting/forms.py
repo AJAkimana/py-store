@@ -14,7 +14,7 @@ class BudgetForm:
 class BudgetItemForm:
 	class Meta:
 		model = BudgetItem
-		fields = ['name', 'amount']
+		fields = ['name', 'amount', 'budget']
 		error_class = "error"
 
 

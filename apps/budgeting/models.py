@@ -35,6 +35,9 @@ class Budget(BaseModel):
 		ordering = ['-start_date']
 		unique_together = ['name', 'user']
 
+	def __str__(self):
+		return f'{self.name}=>({self.user.name})'
+
 
 class BudgetItem(BaseModel):
 	name = models.CharField(blank=False, max_length=50)

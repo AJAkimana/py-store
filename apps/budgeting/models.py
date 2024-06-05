@@ -36,7 +36,7 @@ class Budget(BaseModel):
 		unique_together = ['name', 'user']
 
 	def __str__(self):
-		return f'{self.name}=>({self.user.name})'
+		return f'{self.name}=>({self.user})'
 
 
 class BudgetItem(BaseModel):

@@ -1,3 +1,5 @@
+import os
+
 from django.core.management import call_command
 # from django_cron import CronJobBase, Schedule
 
@@ -11,6 +13,8 @@ from django.core.management import call_command
 def backup_filename():
 	try:
 		print({'message': 'Db backup starting...'})
+		for key, value in os.environ.items():
+			print(f"{key}: {value}")
 		call_command('dbbackup')
 		res = {'message': 'Db backed up'}
 		print(res)

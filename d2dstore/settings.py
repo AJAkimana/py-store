@@ -16,7 +16,11 @@ from dotenv import load_dotenv
 
 from app_utils.helpers import backup_filename
 
-load_dotenv(os.path.abspath('app.env'))
+# Specify the path to your .env file
+dotenv_path = os.path.join(os.path.dirname(__file__), 'app.env')
+print(f"Loading .env file from: {dotenv_path}")  # Debugging line
+load_dotenv(dotenv_path)
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

@@ -17,13 +17,13 @@ from dotenv import load_dotenv
 from app_utils.helpers import backup_filename
 
 # Specify the path to your .env file
-dotenv_path = os.path.abspath('app.env')
+dotenv_path = os.path.join(os.path.dirname(__file__), 'app.env')
 print(f"Loading .env file from: {dotenv_path}")  # Debugging line
 load_dotenv(dotenv_path)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+print(f"Loading ===BASE_DIR=== file from: {BASE_DIR}")  # Debugging line
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/

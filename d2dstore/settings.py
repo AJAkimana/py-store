@@ -21,15 +21,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Specify the path to your .env file
 dotenv_path = os.path.join(BASE_DIR, 'app.env')
-print(f"Loading .env file from: {dotenv_path}")  # Debugging line
-print(f"Loading ===BASE_DIR=== file from: {BASE_DIR}")  # Debugging line
 load_dotenv(dotenv_path)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET", 'vqq1o*5cd(mks7s((vcdrk1xb5)5k=!y=a+^s0ku*!9_n@xs8h')
+SECRET_KEY = os.getenv("SECRET", '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.getenv('DEBUG', '') == 'true')
@@ -194,13 +192,10 @@ DBBACKUP_STORAGE_OPTIONS = {
 	'oauth2_access_token': os.getenv('DROPBOX_TOKEN', ''),
 	# 'location': os.getenv('DB_BACKUP_ZONE', None)
 }
-# # DBBACKUP_FILENAME_TEMPLATE = backup_filename
-# CRONJOBS = [
-# 	('*/1 * * * *', 'app_utils.background_task.backup_filename')
-# ]
+
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
 CRONJOBS = [
-	('*/5 * * * *', 'app_utils.background_task.backup_filename')
+	('0 9 * * SUN', 'app_utils.background_task.backup_filename')
 ]
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)

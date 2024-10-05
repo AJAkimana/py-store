@@ -183,6 +183,16 @@ USE_TZ = True
 STATIC_ROOT = os.path.join(BASE_DIR, 'django_static/')
 STATIC_URL = 'django_static/'
 
+# smtp settings
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = "myappbackups24@gmail.com"
+EMAIL_HOST_PASSWORD = "Umuhuza@24"
+EMAIL_PORT = 587
+EMAIL_USE_LOCALTIME = True
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = 'd2dstore@gmail.com'
+
 # GeopIP2
 GEOIP_PATH = os.getenv('GEOIP_PATH', '')
 # Backup database

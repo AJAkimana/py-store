@@ -1,25 +1,19 @@
-from d2dstore import settings
+from django.core.mail import send_mail, EmailMessage
+from d2dstore.settings import EMAIL_HOST_USER, DEFAULT_FROM_EMAIL
 
 
-def smtp_send_email(to_emails, subject, body_plain_text, body_html, attachments=None):
+def smtp_send_email(to_emails: [str], subject: str, body_html: str, attachments=None):
 	response = {"has_error": True, "message": "Failed to send email"}
 	try:
-		from django.core.mail import send_mail, EmailMessage
-		from d2dstore.settings import EMAIL_HOST_USER
 
 		# Decide what to use if it has attachments
 		if attachments is None:
-			send_mail(
-				subject=subject,
-				message=body_plain_text,
-				recipient_list=to_emails,
-				from_email=None,
-				html_message=body_html)
+			send_mail(subject, body_html, DEFAULT_FROM_EMAIL, to_emails, fail_silently=False)
 		else:
 			obj_mail = EmailMessage(subject, body_html, EMAIL_HOST_USER, to_emails)
 			obj_mail.content_subtype = "html"
 
-			# add atachments
+			# add attachments
 			for x in attachments:
 				obj_mail.attach_file(x)
 			obj_mail.send(False)
@@ -82,10 +76,11 @@ def template_email():
 											<div>
 												<div style="margin-bottom:14pt; margin-top:14pt">Dear [[email_full_names]],</div>
 												<div style="margin-bottom:14pt; margin-top:14pt">
-												[[email_body_content]]
-												<br />
-												Best regards!<br />
-												D2DStore Team</div>
+													[[email_body_content]]
+													<br />
+													Best regards!<br />
+													D2DStore Team
+												</div>
 											</div>
 										</td>
 									</tr>

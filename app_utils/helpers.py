@@ -1,8 +1,10 @@
 import os
+from datetime import timedelta
 from uuid import UUID
 
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework.response import Response
 
 PAGINATION_DEFAULT = {
@@ -131,6 +133,7 @@ def get_aggregated_in_out(stores=[]):
 def get_stores_filter(**filters):
 	search_key = filters.get('search_key', '')
 	search_type = filters.get('search_type', 'use')
+	n_days = filters.get('n_days', '')
 	search_date_from = filters.get('search_date_from', '')
 	search_date_to = filters.get('search_date_to', '')
 
@@ -142,6 +145,11 @@ def get_stores_filter(**filters):
 		)
 	if search_date_from != "" and search_date_to != "":
 		search_filter &= Q(action_date__range=(search_date_from, search_date_to))
+
+	if n_days != '':
+		now = timezone.now()
+		period_ago = now - timedelta(days=int(n_days))
+		search_filter &= Q(action_date__gte=period_ago)
 
 	return search_filter
 

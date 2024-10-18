@@ -1,14 +1,12 @@
 import uuid
+from typing import Dict, Any
+
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 
-from app_utils.constants import MEMBER_ACCESS_LEVELS
-from app_utils.database import get_model_object
-from app_utils.helpers import get_stores_filter
-# from apps.households.models import Household
 from apps.users.manager import UserManager
 
 
@@ -43,7 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 	def get_previous_passwords(self):
 		return self.previous_passwords.split(',')
 
-	def get_user_stores(self, filters):
+	def get_user_stores(self, filters: Dict[str, Any]):
 		return self.stores.filter(filters)
 
 	def get_store_total_amount(self, store_type='use', is_inflow=True):

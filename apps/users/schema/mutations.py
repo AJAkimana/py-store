@@ -7,6 +7,7 @@ from graphql import GraphQLError
 # from graphql_jwt.utils import jwt_payload, jwt_encode
 from graphql_jwt.shortcuts import get_token
 from app_utils.database import get_model_object
+from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
 from apps.users.models import User
 from app_utils.model_types.user import UserType
@@ -154,6 +155,15 @@ class LogoutUser(graphene.Mutation):
 		return LogoutUser(message='Success')
 
 
+class SendConfirmationEmail(graphene.Mutation):
+	message = graphene.String()
+	has_error = graphene.Boolean()
+
+	def mutate(self, info, **kwargs):
+		sent = send_test_email()
+		return SendConfirmationEmail(message=sent['message'], has_error=sent['has_error'])
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
@@ -161,3 +171,4 @@ class UserMutations(graphene.ObjectType):
 	register_user = RegisterUser.Field()
 	update_registered_user = UpdateRegisteredUser.Field()
 	logout_user = LogoutUser.Field()
+	send_confirmation_email = SendConfirmationEmail.Field()

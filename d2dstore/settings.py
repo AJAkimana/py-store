@@ -183,6 +183,15 @@ USE_TZ = True
 STATIC_ROOT = os.path.join(BASE_DIR, 'django_static/')
 STATIC_URL = 'django_static/'
 
+# smtp settings
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_PORT = os.getenv('EMAIL_PORT', '')
+EMAIL_USE_LOCALTIME = True
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
+
 # GeopIP2
 GEOIP_PATH = os.getenv('GEOIP_PATH', '')
 # Backup database
@@ -195,7 +204,8 @@ DBBACKUP_STORAGE_OPTIONS = {
 
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
 CRONJOBS = [
-	('0 9 * * 7', 'app_utils.background_task.backup_filename')
+	('0 9 * * 7', 'app_utils.background_task.backup_filename'),
+	('0 17 * * 7', 'app_utils.background_task.send_weekly_summary')
 ]
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)

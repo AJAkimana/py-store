@@ -20,7 +20,7 @@ class Command(BaseCommand):
 	def handle(self, *args, **kwargs):
 
 		# Get all users (you can also filter users if needed)
-		users = User.objects.filter(user_name='akimana')
+		users = User.objects.all()
 
 		for user in users:
 			# Query the transactions from the last 7 days

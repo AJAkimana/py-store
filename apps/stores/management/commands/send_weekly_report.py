@@ -62,23 +62,23 @@ class Command(BaseCommand):
 		if stores.exists():
 			btn_call_action = "to record more or view more records"
 			email_body_content = f"""
-				<p>Here is a summary your transaction you made this week. From {start_date} - {end_date}</p>
-				<table>
+				<p>Here is a summary of the transactions you made this week. From {start_date} - {end_date}</p>
+				<table class="record-tb">
 					<thead>
-						<tr>
-							<th>Date</th>
-							<th>Description</th>
-							<th>Amount</th>
+						<tr class="record-tr">
+							<th class="record-td">Date</th>
+							<th class="record-td">Description</th>
+							<th class="record-td">Amount</th>
 						</tr>
 					</thead>
 					<tbody>
 				"""
 			for record in stores:
 				email_body_content += f"""
-							<tr>
-								<td>{record.action_date.strftime('%Y-%m-%d')}</td>
-								<td>{record.description}</td>
-								<td>{record.amount}</td>
+							<tr class="record-tr">
+								<td class="record-td">{record.action_date.strftime('%Y-%m-%d')}</td>
+								<td class="record-td">{record.description}</td>
+								<td class="record-td">{record.amount}</td>
 							</tr>
 						"""
 			email_body_content += """

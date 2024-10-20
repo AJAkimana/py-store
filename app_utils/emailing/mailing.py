@@ -45,11 +45,31 @@ def template_email(subject="", full_names=""):
 		font-family: 'Roboto', 'Arial', sans-serif; padding: 2rem; line-height: 1.8; color: #333; background: #fff;
 		border-radius: 4px; shadow: 0 .5rem 1rem rgba(0,0,0,.15)
 	"""
+	styles = """
+		record-tb {
+			font-family: arial, sans-serif;
+			border-collapse: collapse;
+			width: 100%;
+		}
+
+		record-td {
+			border: 1px solid #dddddd;
+			text-align: left;
+			padding: 8px;
+		}
+
+		record-tr:nth-child(even) {
+			background-color: #dddddd;
+		}
+	"""
 
 	html = f"""
 	<html>
 		<head>
 			<title>{subject}</title>
+			<style>
+				{styles}
+			</style>
 		</head>
 		<body style="padding: 1rem; background: #f1f1f1">
 			<div style="{body_div_styles}">

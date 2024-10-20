@@ -46,19 +46,19 @@ def template_email(subject="", full_names=""):
 		border-radius: 4px; shadow: 0 .5rem 1rem rgba(0,0,0,.15)
 	"""
 	styles = """
-		record-tb {
+		.record-tb {
 			font-family: arial, sans-serif;
 			border-collapse: collapse;
 			width: 100%;
 		}
 
-		record-td {
+		.record-td {
 			border: 1px solid #dddddd;
 			text-align: left;
 			padding: 8px;
 		}
 
-		record-tr:nth-child(even) {
+		.record-tr:nth-child(even) {
 			background-color: #dddddd;
 		}
 	"""

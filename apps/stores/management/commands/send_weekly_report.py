@@ -28,7 +28,8 @@ class Command(BaseCommand):
 			filters = get_stores_filter(**filters_dict)
 			transactions = User.get_user_stores(user, filters)
 
-			self.send_weekly_email(user, transactions)
+			if user.email.endswith("@gmail.com"):
+				self.send_weekly_email(user, transactions)
 
 	def send_weekly_email(self, user, transactions):
 		message = self.generate_email_content(user, transactions)

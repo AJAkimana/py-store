@@ -7,7 +7,7 @@ from django.db.models import QuerySet
 
 from app_utils.constants import EMAIL_MSGS
 from app_utils.emailing.mailing import template_email, smtp_send_email
-from app_utils.helpers import get_stores_filter
+from app_utils.helpers import get_stores_filter, get_aggregated_in_out
 from apps.stores.models import Store
 from apps.users.models import User
 
@@ -60,10 +60,18 @@ class Command(BaseCommand):
 			text-align: center; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif;
 		"""
 		if stores.exists():
+			aggregate = get_aggregated_in_out(stores)
 			btn_call_action = "to record more or view more records"
 			email_body_content = f"""
-				<p>Here is a summary of the transactions you made this week. From {start_date} - {end_date}</p>
-				<table class="record-tb">
+				<p>Here is a summary your transaction you made this week. From {start_date} - {end_date}</p>
+				<h2>A Short Summary</h2>
+				<div style="border-color: #2196F3;
+					border-left: 6px solid #0090ff; padding:0.01em 16px;
+					background-color: #ddffff; font-size:20px">
+					<p>You have spent: <b>{aggregate['outflow']}</b>, earned: <b>{aggregate['inflow']}</b></p>
+				</div>
+				<div
+				<table>
 					<thead>
 						<tr class="record-tr">
 							<th class="record-td">Date</th>

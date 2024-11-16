@@ -149,3 +149,17 @@ def template_email(subject="", full_names=""):
 		"""
 	html = html.replace("[[email_site_logo]]", '')
 	return html
+
+
+def write_email_file(title, content):
+	# Specify the file name and the content
+	try:
+		file_name = f"{title}.html"
+
+		# Open the file in write mode and write the content
+		with open(file_name, "w") as file:
+			file.write(content)
+
+		print(f"Content written to {file_name} successfully!")
+	except Exception as e:
+		print(f"An error occurred: {e}")

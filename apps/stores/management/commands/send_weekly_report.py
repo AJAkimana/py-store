@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import QuerySet
 
 from app_utils.constants import EMAIL_MSGS
-from app_utils.emailing.mailing import template_email, smtp_send_email
+from app_utils.emailing.mailing import template_email, smtp_send_email, write_email_file
 from app_utils.helpers import get_stores_filter, get_aggregated_in_out
 from apps.stores.models import Store
 from apps.users.models import User
@@ -34,6 +34,8 @@ class Command(BaseCommand):
 	def send_weekly_email(self, user, transactions):
 		message = self.generate_email_content(user, transactions)
 		subject = "Your Weekly Transaction Summary"
+		# if user.email == 'akimanaja17@gmail.com':
+		# 	write_email_file('akimanaja', message)
 		response = smtp_send_email([user.email], subject, message)
 		print('============================')
 		print(user.first_name)
@@ -71,8 +73,7 @@ class Command(BaseCommand):
 					background-color: #ddffff; font-size:20px">
 					<p>You have spent: <b>{aggregate['outflow']}</b>, earned: <b>{aggregate['inflow']}</b></p>
 				</div>
-				<div
-				<table>
+				<table class="record-tb">
 					<thead>
 						<tr class="record-tr">
 							<th class="record-td">Date</th>

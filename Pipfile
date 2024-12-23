@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pylint = "==2.5.3"
+pylint = "==3.3.2"
 gunicorn = "==20.0.4"
 
 [packages]
@@ -26,6 +26,7 @@ django-ipware = "==4.0.0"
 pyjwt = "==2.7.0"
 geoip2 = "==4.3.0"
 django-crontab = "==0.7.1"
+django-upgrade = "==1.22.2"
 
 [requires]
-python_version = "3.8"
+python_version = "3.10"

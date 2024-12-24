@@ -5,6 +5,7 @@ from apps.users.models import User
 from apps.users.forms import UserChangeForm, UserCreationForm
 
 
+@admin.register(User)
 class UserAdmin(BaseUserAdmin):
 	ordering = ["id"]
 	add_form = UserCreationForm
@@ -29,4 +30,3 @@ class UserAdmin(BaseUserAdmin):
 	search_fields = ['user_name', 'first_name', 'last_name', 'email']
 
 
-admin.site.register(User, UserAdmin)

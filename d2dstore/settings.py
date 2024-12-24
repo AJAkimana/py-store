@@ -101,7 +101,7 @@ DATABASES = {
 		#     'read_default_file': os.getenv('MYSQL_CONFIG'),
 		# },
 
-		'ENGINE': 'django.db.backends.postgresql_psycopg2',
+		'ENGINE': 'django.db.backends.postgresql',
 		'NAME': os.getenv("DB_NAME", ''),
 		'USER': os.getenv("DB_USER", ''),
 		'PASSWORD': os.getenv("DB_PASSWORD", ''),
@@ -170,7 +170,6 @@ TIME_ZONE = 'Africa/Kigali'
 
 USE_I18N = True
 
-USE_L10N = True
 
 USE_TZ = True
 

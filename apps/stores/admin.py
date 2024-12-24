@@ -5,6 +5,7 @@ from apps.stores.models import Store
 from apps.stores.forms import StoreChangeForm, StoreCreationForm
 
 
+@admin.register(Store)
 class StoreAdmin(BaseModelAdmin):
 	ordering = ["action_date"]
 	add_form = StoreCreationForm
@@ -27,4 +28,3 @@ class StoreAdmin(BaseModelAdmin):
 	search_fields = ['amount', 'description']
 
 
-admin.site.register(Store, StoreAdmin)

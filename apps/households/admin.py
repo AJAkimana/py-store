@@ -15,6 +15,7 @@ from apps.households.forms import HouseholdCreationForm, HouseholdChangeForm, Ho
 	HouseholdMemberChangeForm
 
 
+@admin.register(Household)
 class HouseholdAdmin(BaseModelAdmin):
 	ordering = ["created_at"]
 	add_form = HouseholdCreationForm
@@ -34,6 +35,7 @@ class HouseholdAdmin(BaseModelAdmin):
 	search_fields = ['name']
 
 
+@admin.register(HouseholdMember)
 class HouseholdMemberAdmin(BaseModelAdmin):
 	ordering = ["created_at"]
 	add_form = HouseholdMemberCreationForm
@@ -54,5 +56,3 @@ class HouseholdMemberAdmin(BaseModelAdmin):
 	search_fields = ['user', 'household', 'access_level']
 
 
-admin.site.register(Household, HouseholdAdmin)
-admin.site.register(HouseholdMember, HouseholdMemberAdmin)

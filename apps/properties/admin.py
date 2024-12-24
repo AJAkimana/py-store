@@ -6,6 +6,7 @@ from apps.properties.forms import PropertyChangeForm, PropertyCreationForm, prop
 from apps.properties.models import Property
 
 
+@admin.register(Property)
 class PropertyAdmin(BaseModelAdmin):
 	ordering = ["created_at"]
 	add_form = PropertyCreationForm
@@ -28,5 +29,4 @@ class PropertyAdmin(BaseModelAdmin):
 	search_fields = ['price', 'name']
 
 
-admin.site.register(Property, PropertyAdmin)
 # admin.site.register(PropDetail)

@@ -6,6 +6,7 @@ from apps.budgeting.forms import BudgetChangeForm, BudgetCreationForm, BudgetIte
 from apps.budgeting.models import Budget, BudgetItem
 
 
+@admin.register(Budget)
 class BudgetAdmin(BaseModelAdmin):
 	ordering = ["created_at"]
 	add_form = BudgetCreationForm
@@ -26,6 +27,7 @@ class BudgetAdmin(BaseModelAdmin):
 	search_fields = ['name', 'status']
 
 
+@admin.register(BudgetItem)
 class BudgetItemAdmin(BaseModelAdmin):
 	ordering = ["created_at"]
 	add_form = BudgetItemCreationForm
@@ -45,5 +47,3 @@ class BudgetItemAdmin(BaseModelAdmin):
 	search_fields = ['name']
 
 
-admin.site.register(Budget, BudgetAdmin)
-admin.site.register(BudgetItem, BudgetItemAdmin)

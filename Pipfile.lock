@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f0b80ffb5a0419f1587c3db65172e6b6c66c6a77d92c0385b5e24af84679c530"
+            "sha256": "2ad912acacf9a8147ecf1eef6f19490bc7f3cf51a666d725cd723818963a84b3"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -360,12 +360,12 @@
         },
         "djangorestframework": {
             "hashes": [
-                "sha256:5cc724dc4b076463497837269107e1995b1fbc917468d1b92d188fd1af9ea789",
-                "sha256:a5967b68a04e0d97d10f4df228e30f5a2d82ba63b9d03e1759f84993b7bf1b53"
+                "sha256:2b8871b062ba1aefc2de01f773875441a961fefbf79f5eed1e32b2f096944b20",
+                "sha256:36fe88cd2d6c6bec23dca9804bab2ba5517a8bb9d8f47ebc68981b56840107ad"
             ],
             "index": "pypi",
-            "markers": "python_version >= '3.5'",
-            "version": "==3.11.2"
+            "markers": "python_version >= '3.8'",
+            "version": "==3.15.2"
         },
         "dropbox": {
             "hashes": [
@@ -1091,11 +1091,11 @@
     "develop": {
         "astroid": {
             "hashes": [
-                "sha256:6aaea045f938c735ead292204afdb977a36e989522b7833ef6fea94de743f442",
-                "sha256:db676dc4f3ae6bfe31cda227dc60e03438378d7a896aec57422c95634e8d722f"
+                "sha256:187ccc0c248bfbba564826c26f070494f7bc964fd286b6d9fff4420e55de828c",
+                "sha256:a88c7994f914a4ea8572fac479459f4955eeccc877be3f2d959a33273b0cf40b"
             ],
             "markers": "python_full_version >= '3.9.0'",
-            "version": "==3.3.6"
+            "version": "==3.3.8"
         },
         "dill": {
             "hashes": [

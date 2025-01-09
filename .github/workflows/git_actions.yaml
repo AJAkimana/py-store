@@ -27,7 +27,7 @@ jobs:
             rm -rf django_static
             pipenv run python manage.py collectstatic
             pipenv run python manage.py crontab add
-            sudo systemctl daemon-reload
-            sudo systemctl restart gunicorn
+            echo "${{ secrets.SSH_PASSWORD }}" | sudo -S systemctl daemon-reload
+            echo "${{ secrets.SSH_PASSWORD }}" | sudo -S systemctl restart gunicorn
             exit
             echo "Deployment is done!"

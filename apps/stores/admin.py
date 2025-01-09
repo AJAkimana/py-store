@@ -15,7 +15,7 @@ class StoreAdmin(BaseModelAdmin):
 	list_filter = ['record_type', 'is_property', 'is_inflow', 'user']
 	fieldsets = (
 		(_('Amount Information'), {'fields': ('amount', 'is_inflow', 'is_property')}),
-		(_('Detailed Information'), {'fields': ('description', 'record_type',)}),
+		(_('Detailed Information'), {'fields': ('budget_item', 'description', 'record_type',)}),
 		(_('Store OwnerShip'), {'fields': ('user',)}),
 		(_('Important Dates'), {'fields': ('action_date',)}),
 	)

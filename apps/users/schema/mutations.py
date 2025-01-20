@@ -39,8 +39,8 @@ class RegisterUser(graphene.Mutation):
 
 class UpdateRegisteredUser(RegisterUser):
 	"""
-  This is a mutation used to update new users
-  """
+This is a mutation used to update new users
+"""
 
 	class Arguments(RegisterUser.Arguments):
 		id = graphene.String(required=True)
@@ -57,18 +57,18 @@ class UpdateRegisteredUser(RegisterUser):
 
 class LoginUser(graphene.Mutation):
 	"""
-    Login a users with their credentials
+Login a users with their credentials
 
-    args:
-        password(str): users's registered password
-        email(str): users's registered email
+args:
+password(str): users's registered password
+email(str): users's registered email
 
-    returns:
-        message(str): success messsage confirming login
-        token(str): JWT authorization token used to validate the login
-        rest_token(str): JWT token used to validate REST endpoint access
-        user(obj): 'User' object containing details of the logged in users
-    """
+returns:
+message(str): success messsage confirming login
+token(str): JWT authorization token used to validate the login
+rest_token(str): JWT token used to validate REST endpoint access
+user(obj): 'User' object containing details of the logged in users
+"""
 	message = graphene.String()
 	token = graphene.String()
 	rest_token = graphene.String()
@@ -80,25 +80,26 @@ class LoginUser(graphene.Mutation):
 
 	def mutate(self, info, email, password, **kwargs):
 		user_auth = authenticate(email=email, password=password)
+
 		if user_auth is None:
 			raise GraphQLError('Invalid credentials')
-		user = get_model_object(User, 'email', email)
-		if not user.is_verified:
-			raise GraphQLError('Create a new password first', user_auth)
-		update_last_login(sender=User, user=user)
+
+		if not user_auth.is_verified:
+			raise GraphQLError('Create a new password first')
+		update_last_login(sender=User, user=user_auth)
 		# user_payload = jwt_payload(user_auth)
-		token = get_token(user)
+		token = get_token(user_auth)
 		rest_payload = Token.objects.get_or_create(user=user_auth)
 		rest_token = rest_payload[0]
 
 		return LoginUser(message='Success', token=token,
-										 rest_token=rest_token, user=user)
+										 rest_token=rest_token, user=user_auth)
 
 
 class UpdateUserProfile(graphene.Mutation):
 	"""
-    This is a mutation used to create new users
-    """
+	This is a mutation used to create new users
+	"""
 	user = graphene.Field(UserType)
 	message = graphene.String()
 
@@ -133,7 +134,8 @@ class ResetPassword(graphene.Mutation):
 		if not user_auth:
 			raise GraphQLError('Oops, we dont know you!!')
 		if not user_auth.is_active:
-			raise GraphQLError('Oops, you are not allowed to perform this action.')
+			raise GraphQLError(
+				'Oops, you are not allowed to perform this action.')
 
 		user = get_model_object(User, 'email', email)
 		user.is_verified = True

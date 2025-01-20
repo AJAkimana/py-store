@@ -40,6 +40,7 @@ class CalculateSalary(graphene.Mutation):
     net_pay = gross_salary
 
     client_ip, is_routable = get_client_ip(info.context)
+    print(is_routable)
     city = 'For system'
     country = 'System Home',
     lat, long = '', ''

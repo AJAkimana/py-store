@@ -7,8 +7,8 @@ from django.core.management.base import BaseCommand
 from django.db.models import QuerySet
 
 from app_utils.constants import EMAIL_MSGS
-from app_utils.emailing.mailing import template_email, smtp_send_email, write_email_file
-from app_utils.helpers import get_stores_filter, get_aggregated_in_out
+from app_utils.emailing.mailing import template_email, smtp_send_email
+from app_utils.helpers import get_stores_filter, get_aggregated_in_out, paginate_data
 from apps.stores.models import Store
 from apps.users.models import User
 
@@ -22,13 +22,16 @@ class Command(BaseCommand):
 		parser.add_argument('-t', '--type', type=str, help='Type of email to send', default='weekly')
 
 	def handle(self, *args, **kwargs):
-
+		report_type = kwargs.get('type')
+		reports = {'weekly': 7, 'monthly': self.get_current_month_days()}
+		n_days = reports[report_type]
+		self.stdout.write(self.style.HTTP_INFO(f"Sending {report_type} report for the last {n_days} days"))
 		# Get all users (you can also filter users if needed)
 		users = User.objects.all()
 
 		for user in users:
-			# Query the transactions from the last 7 days
-			filters_dict = {'n_days': 7}
+			# Query the transactions from the last n_days days
+			filters_dict = {'n_days': n_days}
 			filters = get_stores_filter(**filters_dict)
 			transactions = User.get_user_stores(user, filters)
 
@@ -47,16 +50,17 @@ class Command(BaseCommand):
 		print('============================')
 
 	def get_dates(self, in_days=7):
-		seven_days_ago = self.today - timedelta(days=in_days)
+		days_ago = self.today - timedelta(days=in_days)
 
 		# Format dates as YYYY-MM-DD
-		start_date = seven_days_ago.strftime('%Y-%m-%d')
+		start_date = days_ago.strftime('%Y-%m-%d')
 		end_date = self.today.strftime('%Y-%m-%d')
 		return [start_date, end_date]
 
-	def generate_email_content(self, user: User, stores: QuerySet[Store]):
-		[start_date, end_date] = self.get_dates()
-		subject = f"Your Weekly Transaction Summary - {end_date}"
+	def generate_email_content(self, user: User, stores: QuerySet[Store], n_days=7):
+		[start_date, end_date] = self.get_dates(n_days)
+		report_type = 'week' if n_days == 7 else 'month'
+		subject = f"Your {self.get_report_type(n_days)} Transaction Summary - {end_date}"
 
 		full_names = f"{user.first_name} {user.first_name}"
 
@@ -102,7 +106,7 @@ class Command(BaseCommand):
 		else:
 			email_body_content = f"""
 				<p style="margin:10px;">
-					{random.choice(EMAIL_MSGS)}
+					{random.choice(EMAIL_MSGS).replace('[type]', report_type)}
 				</p>
 			"""
 		email_body_content += f"""

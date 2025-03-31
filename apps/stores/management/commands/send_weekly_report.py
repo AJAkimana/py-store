@@ -38,16 +38,18 @@ class Command(BaseCommand):
 			if user.email.endswith("@gmail.com"):
 				self.send_weekly_email(user, transactions)
 
-	def send_weekly_email(self, user, transactions):
-		message = self.generate_email_content(user, transactions)
-		subject = "Your Weekly Transaction Summary"
-		# if user.email == 'akimanaja17@gmail.com':
-		# 	write_email_file('akimanaja', message)
+	def send_weekly_email(self, user, stores, n_days=7):
+		message = self.generate_email_content(user, stores, n_days)
+		subject = f"Your {self.get_report_type(n_days)} Transaction Summary"
+
+		self.stdout.write('============================')
 		response = smtp_send_email([user.email], subject, message)
-		print('============================')
-		print(user.first_name)
-		print(response)
-		print('============================')
+		if response["has_error"]:
+			self.stdout.write(self.style.ERROR(f"Error sending email to {user.email}"))
+			self.stdout.write(self.style.ERROR(f"""====={response["message"]}====="""))
+		else:
+			self.stdout.write(self.style.SUCCESS(f"Email sent to {user.email}"))
+		self.stdout.write('============================')
 
 	def get_dates(self, in_days=7):
 		days_ago = self.today - timedelta(days=in_days)

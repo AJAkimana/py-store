@@ -74,14 +74,17 @@ class Command(BaseCommand):
 		"""
 		if stores.exists():
 			aggregate = get_aggregated_in_out(stores)
+			paginated_result = paginate_data(stores, 10, 1)
 			btn_call_action = "to record more or view more records"
 			email_body_content = f"""
-				<p>Here is a summary your transaction you made this week. From {start_date} - {end_date}</p>
+				<p>Here is a summary your transaction you made this {report_type}. From {start_date} - {end_date}</p>
 				<h2>A Short Summary</h2>
 				<div style="border-color: #2196F3;
 					border-left: 6px solid #0090ff; padding:0.01em 16px;
 					background-color: #ddffff; font-size:20px">
-					<p>You have spent: <b>{aggregate['outflow']}</b>, earned: <b>{aggregate['inflow']}</b></p>
+					<p>You have spent: <b>{aggregate['outflow']}</b>, earned: <b>{aggregate['inflow']}</b>
+					<br/>
+					Total records is: <b>{paginated_result['total_count']}</b></p>
 				</div>
 				<table class="record-tb">
 					<thead>
@@ -93,12 +96,20 @@ class Command(BaseCommand):
 					</thead>
 					<tbody>
 				"""
-			for record in stores:
+			for record in paginated_result['page_data'].object_list:
 				email_body_content += f"""
 							<tr class="record-tr">
 								<td class="record-td">{record.action_date.strftime('%Y-%m-%d')}</td>
 								<td class="record-td">{record.description}</td>
 								<td class="record-td">{record.amount}</td>
+							</tr>
+						"""
+			if paginated_result['total_count'] > 10:
+				email_body_content += f"""
+							<tr class="record-tr">
+								<td class="record-td" colspan="3">
+									And {paginated_result['total_count'] - 10} more records...
+								</td>
 							</tr>
 						"""
 			email_body_content += """

@@ -1,11 +1,19 @@
 import os
 from datetime import timedelta
+from typing import TypedDict
 from uuid import UUID
 
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, Page
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.response import Response
+
+
+class ResultType(TypedDict):
+	page_data: Page
+	num_pages: int
+	total_count: int
+
 
 PAGINATION_DEFAULT = {
 	"page_number": 1,
@@ -30,7 +38,11 @@ PAGINATION_DEFAULT = {
 #   return payload
 
 
-def paginate_data(data_set, page_count=PAGINATION_DEFAULT['page_count'], page_number=PAGINATION_DEFAULT['page_count']):
+def paginate_data(
+	data_set,
+	page_count=PAGINATION_DEFAULT['page_count'],
+	page_number=PAGINATION_DEFAULT['page_count']
+) -> ResultType:
 	"""
   Breaks down retrieved records into chunks per page
   :param data_set: Query Set to be paginated

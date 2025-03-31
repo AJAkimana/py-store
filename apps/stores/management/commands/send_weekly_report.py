@@ -1,3 +1,4 @@
+import calendar
 import os
 import random
 from datetime import datetime, timedelta
@@ -116,3 +117,11 @@ class Command(BaseCommand):
 		email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)
 
 		return email_body_html
+
+	def get_current_month_days(self):
+		# Get current year and month
+		year = datetime.now().year
+		month = datetime.now().month
+
+		# Get the number of days in the current month
+		return calendar.monthrange(year, month)[1]

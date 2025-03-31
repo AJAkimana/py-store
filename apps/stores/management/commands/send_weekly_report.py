@@ -118,6 +118,11 @@ class Command(BaseCommand):
 
 		return email_body_html
 
+	def get_report_type(self, n_days=7):
+		if n_days == 7:
+			return 'Weekly'
+		return 'Monthly'
+
 	def get_current_month_days(self):
 		# Get current year and month
 		year = datetime.now().year

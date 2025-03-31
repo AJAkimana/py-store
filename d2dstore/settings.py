@@ -203,8 +203,9 @@ DBBACKUP_STORAGE_OPTIONS = {
 
 DBBACKUP_FILENAME_TEMPLATE = backup_filename
 CRONJOBS = [
-	('0 9 * * 7', 'app_utils.background_task.backup_filename'),
-	('0 21 * * 7', 'app_utils.background_task.send_weekly_summary')
+	('30 21 * * 7', 'app_utils.background_task.backup_filename'),
+	('0 20 * * 7', 'app_utils.background_task.send_weekly_summary'),
+	('0 21 * * *', 'app_utils.background_task.send_monthly_summary'),
 ]
 
 SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)

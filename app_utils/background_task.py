@@ -1,4 +1,7 @@
+import calendar
+
 from django.core.management import call_command
+from django.utils.timezone import now
 
 
 def backup_filename():
@@ -13,9 +16,23 @@ def backup_filename():
 
 def send_weekly_summary():
 	try:
-		print({'message': 'Start sending...'})
-		call_command('send_weekly_report')
-		print({'message': 'Sent...'})
+		print({'message': 'Start sending weekly report...'})
+		call_command('send_transaction_report', "-t", "weekly")
+		print({'message': 'Weekly report Sent...'})
 	except Exception as error:
 		print('Error sending summary')
 		print(error)
+
+
+def send_monthly_summary():
+	today = now().date()
+	last_day = calendar.monthrange(today.year, today.month)[1]  # Get last day of the month
+
+	if today.day == last_day:
+		try:
+			print({'message': 'Start sending monthly report...'})
+			call_command('send_transaction_report', "-t", "monthly")
+			print({'message': 'Monthly report Sent...'})
+		except Exception as error:
+			print('Error sending summary')
+			print(error)

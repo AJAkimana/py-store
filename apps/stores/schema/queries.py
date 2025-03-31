@@ -33,7 +33,7 @@ class StoreQuery(graphene.ObjectType):
 	)
 
 	@login_required
-	def resolve_stores(self, info, search_member='', page_count=10, page_number=10, **kwargs):
+	def resolve_stores(self, info, search_member='', page_count=10, page_number=1, **kwargs):
 		user = info.context.user
 		search_filter = get_stores_filter(**kwargs)
 		if search_member == '':

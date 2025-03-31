@@ -4,6 +4,7 @@ from d2dstore.settings import EMAIL_HOST_USER, DEFAULT_FROM_EMAIL
 
 def smtp_send_email(to_emails: [str], subject: str, body_html: str, attachments=None):
 	response = {"has_error": True, "message": "Failed to send email"}
+	# return response
 	try:
 
 		# Decide what to use if it has attachments
@@ -30,7 +31,7 @@ def smtp_send_email(to_emails: [str], subject: str, body_html: str, attachments=
 	return response
 
 
-def template_email(subject="", full_names=""):
+def template_email(subject="", full_names="", email=""):
 	"""
 		Replace: [[email_full_names]], [[email_subject]], [[email_body_content]]
 
@@ -133,7 +134,7 @@ def template_email(subject="", full_names=""):
 													<div><strong>Do Not Reply to this email</strong></div>
 													<div>
 														<span style="color:#6f6f6f; font-size:x-small; font-size:11px">
-															This email is sent to {full_names}.</span>
+															This email is sent to {email}.</span>
 														</div>
 												</td>
 											</tr>

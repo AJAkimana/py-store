@@ -18,6 +18,9 @@ class Command(BaseCommand):
 	today = datetime.today().date()
 	FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://store.akimanaja.com')
 
+	def add_arguments(self, parser):
+		parser.add_argument('-t', '--type', type=str, help='Type of email to send', default='weekly')
+
 	def handle(self, *args, **kwargs):
 
 		# Get all users (you can also filter users if needed)

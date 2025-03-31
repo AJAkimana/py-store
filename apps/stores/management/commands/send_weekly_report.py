@@ -62,7 +62,7 @@ class Command(BaseCommand):
 		report_type = 'week' if n_days == 7 else 'month'
 		subject = f"Your {self.get_report_type(n_days)} Transaction Summary - {end_date}"
 
-		full_names = f"{user.first_name} {user.first_name}"
+		full_names = f"{user.first_name} {user.last_name}"
 
 		btn_call_action = "so you start recording them"
 
@@ -118,7 +118,7 @@ class Command(BaseCommand):
 			</div>
 		"""
 
-		email_body_html = template_email(subject, full_names)
+		email_body_html = template_email(subject, full_names, user.email)
 
 		# fill in blanks
 		email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)

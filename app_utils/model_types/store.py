@@ -114,14 +114,14 @@ class FacilityType(graphene.InputObjectType):
 class SalaryType(DjangoObjectType):
 	class Meta:
 		model = Salary
-		# fields = '__all__'
-	# gross_salary = graphene.Float()
-	# net_salary = graphene.Float()
-	# net_pay = graphene.Float()
-	# pension = graphene.Float()
-	# maternity = graphene.Float()
-	# facilities = graphene.Float()
-	# tax = graphene.Float()
+	# fields = '__all__'
+# gross_salary = graphene.Float()
+# net_salary = graphene.Float()
+# net_pay = graphene.Float()
+# pension = graphene.Float()
+# maternity = graphene.Float()
+# facilities = graphene.Float()
+# tax = graphene.Float()
 
 
 class SalaryPaginatorType(PaginatorType):

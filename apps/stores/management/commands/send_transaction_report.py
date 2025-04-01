@@ -32,8 +32,6 @@ class Command(BaseCommand):
 		# Query the transactions from the last n_days days
 		filters_dict = {'n_days': n_days}
 		for user in users:
-			# Query the transactions from the last n_days days
-			filters_dict = {'n_days': n_days}
 			filters = get_stores_filter(**filters_dict)
 			transactions = User.get_user_stores(user, filters)
 

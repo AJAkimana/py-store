@@ -1,7 +1,9 @@
 import graphene
 from django.db import connection
 from django.db.models import Q
-from graphql_jwt.decorators import login_required
+from graphql_jwt.decorators import login_required, superuser_required
+
+from app_utils.background_task import send_weekly_summary, send_monthly_summary
 from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out, get_stores_filter
 from app_utils.model_types.store import StorePaginatorType, \
 	MonthType, StoreRatioType, RecurringStorePaginatorType
@@ -31,6 +33,7 @@ class StoreQuery(graphene.ObjectType):
 		RecurringStorePaginatorType,
 		search_key=graphene.Argument(graphene.String, required=False),
 	)
+	trigger_store_report = graphene.String(report_type=graphene.String())
 
 	@login_required
 	def resolve_stores(self, info, search_member='', page_count=10, page_number=1, **kwargs):
@@ -121,3 +124,10 @@ class StoreQuery(graphene.ObjectType):
 		paginated_result = paginate_data(stores, page_count=10, page_number=1)
 		return paginated_result
 
+	@superuser_required
+	def resolve_trigger_store_report(self, info, report_type='weekly'):
+		if report_type == 'weekly':
+			send_weekly_summary()
+		elif report_type == 'monthly':
+			send_monthly_summary()
+		return 'Report triggered successfully'

@@ -1,7 +1,7 @@
 import calendar
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from django.core.management.base import BaseCommand
 from django.db.models import QuerySet
@@ -23,12 +23,14 @@ class Command(BaseCommand):
 
 	def handle(self, *args, **kwargs):
 		report_type = kwargs.get('type')
-		reports = {'weekly': 7, 'monthly': self.get_current_month_days()}
+		reports = {'weekly': 7, 'monthly': self.get_last_n_days()}
 		n_days = reports[report_type]
 		self.stdout.write(self.style.HTTP_INFO(f"Sending {report_type} report for the last {n_days} days"))
 		# Get all users (you can also filter users if needed)
 		users = User.objects.all()
 
+		# Query the transactions from the last n_days days
+		filters_dict = {'n_days': n_days}
 		for user in users:
 			# Query the transactions from the last n_days days
 			filters_dict = {'n_days': n_days}
@@ -143,10 +145,17 @@ class Command(BaseCommand):
 			return 'Weekly'
 		return 'Monthly'
 
-	def get_current_month_days(self):
-		# Get current year and month
-		year = datetime.now().year
-		month = datetime.now().month
+	def get_last_n_days(self):
+		today = date.today()
 
-		# Get the number of days in the current month
-		return calendar.monthrange(year, month)[1]
+		if today.day < 10:
+			# Get the number of days in the previous month
+			first_day_of_current_month = today.replace(day=1)
+			last_month = first_day_of_current_month - timedelta(days=1)
+			n_days = calendar.monthrange(last_month.year, last_month.month)[1]
+		else:
+			# Get the difference between the 1st day and today
+			n_days = today.day - 1
+
+		# last_n_days = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(n_days)]
+		return n_days

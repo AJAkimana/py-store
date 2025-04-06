@@ -41,7 +41,7 @@ PAGINATION_DEFAULT = {
 def paginate_data(
 	data_set,
 	page_count=PAGINATION_DEFAULT['page_count'],
-	page_number=PAGINATION_DEFAULT['page_count']
+	page_number=PAGINATION_DEFAULT['page_number']
 ) -> ResultType:
 	"""
   Breaks down retrieved records into chunks per page

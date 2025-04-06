@@ -24,7 +24,7 @@ class BudgetingQuery(graphene.ObjectType):
 	current_budget = graphene.Field(BudgetType, budget_id=graphene.String())
 
 	@login_required
-	def resolve_budgets(self, info, search_member='', page_count=10, page_number=10, **kwargs):
+	def resolve_budgets(self, info, search_member='', page_count=10, page_number=1, **kwargs):
 		user = info.context.user
 		search_filter = get_budgets_filter(**kwargs)
 		if search_member == '':

@@ -24,11 +24,11 @@ def send_weekly_summary():
 		print(error)
 
 
-def send_monthly_summary():
+def send_monthly_summary(is_manual=False):
 	today = now().date()
 	last_day = calendar.monthrange(today.year, today.month)[1]  # Get last day of the month
 
-	if today.day == last_day:
+	if today.day == last_day or is_manual:
 		try:
 			print({'message': 'Start sending monthly report...'})
 			call_command('send_transaction_report', "-t", "monthly")

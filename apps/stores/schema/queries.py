@@ -129,5 +129,5 @@ class StoreQuery(graphene.ObjectType):
 		if report_type == 'weekly':
 			send_weekly_summary()
 		elif report_type == 'monthly':
-			send_monthly_summary()
+			send_monthly_summary(is_manual=True)
 		return 'Report triggered successfully'

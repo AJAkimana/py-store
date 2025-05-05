@@ -2,6 +2,7 @@ import graphene
 import graphql_jwt
 from graphene_django.debug import DjangoDebug
 
+from apps.behavior_ip.schema.queries import BehaviorQuery
 from apps.budgeting.schema.mutations import BudgetMutations
 from apps.budgeting.schema.queries import BudgetingQuery
 from apps.households.schema.mutations import HouseholdMutations
@@ -23,6 +24,7 @@ class AppQuery(
 	ManageSystemQuery,
 	HouseholdQuery,
 	BudgetingQuery,
+	BehaviorQuery,
 	graphene.ObjectType
 ):
 	debug = graphene.Field(DjangoDebug, name="_debug")

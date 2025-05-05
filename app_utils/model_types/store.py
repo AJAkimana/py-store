@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 
+from apps.behavior_ip.models import Behavior
 from apps.budgeting.models import Budget, BudgetItem
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
@@ -55,6 +56,11 @@ class BudgetItemType(DjangoObjectType):
 		return sum([store.amount for store in self.stores.all()])
 
 
+class BehaviorType(DjangoObjectType):
+	class Meta:
+		model = Behavior
+
+
 class PaginatorType(graphene.ObjectType):
 	num_pages = graphene.Int()
 	total_count = graphene.Int()
@@ -87,6 +93,10 @@ class StorePaginatorType(PaginatorType):
 
 class RecurringStorePaginatorType(PaginatorType):
 	page_data = graphene.List(RecurringStoreType)
+
+
+class BehaviorPaginatorType(PaginatorType):
+	page_data = graphene.List(BehaviorType)
 
 
 class HouseholdPaginatorType(PaginatorType):

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 	'apps.properties',
 	'apps.manage_system',
 	'apps.budgeting',
+	'apps.behavior_ip',
 	'dbbackup',  # django-dbbackup
 	'graphene_django',
 	'django_crontab'  # For automatic job

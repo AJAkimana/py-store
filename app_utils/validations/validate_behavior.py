@@ -1,9 +1,17 @@
 from datetime import date
 
 from django.db.models import Q
+# from django.utils.timezone import now
 from graphql import GraphQLError
 
 from apps.behavior_ip.models import Behavior, BehaviorScore
+
+
+def get_score(rate: str, count: int):
+	if rate == 'so-so':
+		return 0
+	multi = 1 if rate == 'good' else -1
+	return 100 / (count + 1) * multi
 
 
 class ValidateBehavior:
@@ -31,14 +39,25 @@ class ValidateBehavior:
 		alike_behaviors = Behavior.objects.filter(filters)
 
 		if not alike_behaviors.exists():
-			the_behavior = Behavior.objects.create(**self.behavior)
+			the_behavior = Behavior.objects.create(
+				name=behavior.name,
+				description=behavior.name,
+				user=behavior.user,
+				household=behavior.household
+			)
 		elif len(alike_behaviors) == 1:
 			the_behavior = alike_behaviors.first()
 		else:
 			raise GraphQLError(f"Too many behaviors with the same name")
+		scores = BehaviorScore.objects.filter(behavior=the_behavior, action_date=self.behavior['action_date'])
 
-		score = BehaviorScore.objects.filter(behavior=the_behavior, action_date__date=date(behavior.action_date)).first()
-		if score:
-			raise GraphQLError(f"Behavior score already exists for the date {behavior.action_date}")
+		score_count = len(scores)
+		if scores.exists():
+			for s in scores:
+				if s.rate != 'so-so':
+					new_score = get_score(s.rate, score_count)
+					s.score = new_score
+					s.save()
 
-		return BehaviorScore.objects.create(behavior=the_behavior, **self.behavior)
+		new_score = get_score(self.behavior['rate'], score_count)
+		return BehaviorScore.objects.create(behavior=the_behavior, score=new_score, rate=self.behavior['rate'])

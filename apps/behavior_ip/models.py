@@ -38,6 +38,7 @@ class Behavior(BaseModel):
 class BehaviorScore(BaseModel):
 	action_date = models.DateField(blank=False, null=False, default=now)
 	score = models.FloatField()
+	description = models.CharField(blank=False, max_length=255, null=True)
 	rate = models.CharField(
 		max_length=20,
 		choices=BEHAVIOR_CHOICES,

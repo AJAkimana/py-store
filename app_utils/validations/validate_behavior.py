@@ -60,4 +60,9 @@ class ValidateBehavior:
 					s.save()
 
 		new_score = get_score(self.behavior['rate'], score_count)
-		return BehaviorScore.objects.create(behavior=the_behavior, score=new_score, rate=self.behavior['rate'])
+		return BehaviorScore.objects.create(
+			behavior=the_behavior,
+			score=new_score,
+			rate=self.behavior['rate'],
+			description=self.behavior['description']
+		)

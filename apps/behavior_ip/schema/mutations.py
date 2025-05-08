@@ -15,6 +15,7 @@ class CreateEditBehavior(graphene.Mutation):
 
 	class Arguments:
 		name = graphene.String(required=True)
+		description = graphene.String(required=False)
 		rate = graphene.String(required=False)
 		household_id = graphene.String(required=False)
 		action_date = graphene.Date(required=True)

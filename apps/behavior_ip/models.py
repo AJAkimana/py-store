@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 from django.utils.timezone import now
 
+from app_utils.constants import BEHAVIOR_CHOICES
 from apps.households.models import Household
 from apps.users.models import User
 from d2dstore.models import BaseModel
@@ -37,6 +38,11 @@ class Behavior(BaseModel):
 class BehaviorScore(BaseModel):
 	action_date = models.DateField(blank=False, null=False, default=now)
 	score = models.FloatField()
+	rate = models.CharField(
+		max_length=20,
+		choices=BEHAVIOR_CHOICES,
+		default='good'
+	)
 	behavior = models.ForeignKey(
 		Behavior,
 		related_name='scores',

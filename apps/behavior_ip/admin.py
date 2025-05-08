@@ -33,7 +33,7 @@ class BehaviorScoreAdmin(BaseModelAdmin):
 	add_form = BehaviorScoreCreationForm
 	form = BehaviorScoreChangeForm
 	model = BehaviorScore
-	list_display = ['score', 'rate', 'action_date', 'behavior']
+	list_display = ['score', 'rate', 'description', 'action_date', 'behavior']
 	list_filter = ['behavior', 'rate', 'action_date']
 	fieldsets = (
 		(_('Detailed Information'), {'fields': ('rate', 'score', 'action_date', 'behavior',)}),

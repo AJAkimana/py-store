@@ -29,6 +29,11 @@ class HouseholdMemberType(DjangoObjectType):
 		model = HouseholdMember
 
 
+class BehaviorType(DjangoObjectType):
+	class Meta:
+		model = Behavior
+
+
 class BudgetType(DjangoObjectType):
 	class Meta:
 		model = Budget

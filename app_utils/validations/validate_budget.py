@@ -1,4 +1,3 @@
-from django.db.models import Q
 from graphql import GraphQLError
 
 from app_utils.constants import BUDGET_STATUSES

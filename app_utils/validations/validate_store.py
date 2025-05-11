@@ -6,7 +6,6 @@ from app_utils.database import get_model_object, SaveContextManager
 from apps.budgeting.models import BudgetItem
 from apps.properties.models import Property
 from apps.stores.models import Store
-from apps.users.models import User
 
 
 class ValidateStore:

@@ -78,3 +78,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 	def get_user_budgets(self, filters):
 		return self.budgets.filter(filters)
+
+	def get_user_behaviors(self, filters):
+		return self.behaviors.filter(filters)

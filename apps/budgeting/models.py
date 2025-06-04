@@ -47,6 +47,7 @@ class BudgetItem(BaseModel):
 		related_name='budget_items',
 		on_delete=models.PROTECT
 	)
+	is_recurring = models.BooleanField(default=False)
 
 	class Meta:
 		db_table = "budget_items"

@@ -89,6 +89,7 @@ class StoreInputType(graphene.InputObjectType):
 class BudgetItemInputType(graphene.InputObjectType):
 	name = graphene.String()
 	amount = graphene.Float()
+	is_recurring = graphene.Boolean()
 
 
 class StorePaginatorType(PaginatorType):

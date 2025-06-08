@@ -86,7 +86,8 @@ class CreateBudgetItems(graphene.Mutation):
 				name=item['name'],
 				amount=item['amount'], budget=budget).first()
 			if not has_saved:
-				item['budget_id'] = kwargs['budget_id']
+				if not item['is_recurring']:
+					item['budget_id'] = kwargs['budget_id']
 				BudgetItem(**item).save()
 				saved += 1
 			else:

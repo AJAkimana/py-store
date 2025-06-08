@@ -1,3 +1,6 @@
+import calendar
+from datetime import date
+
 import graphene
 from graphene_django import DjangoObjectType
 
@@ -58,7 +61,25 @@ class BudgetItemType(DjangoObjectType):
 	amount_spent = graphene.Float(required=True)
 
 	def resolve_amount_spent(self, info, **kwargs):
-		return sum([store.amount for store in self.stores.all()])
+		# Filter stores using 1st day of the month and current date
+		today = date.today()
+		first_day = today.replace(day=1)
+		today = date.today()
+		last_day = calendar.monthrange(today.year, today.month)[1]
+		last_day_of_month = date(today.year, today.month, last_day)
+		all_stores = self.stores.filter(action_date__gte=first_day, action_date__lte=last_day_of_month)
+		return sum([store.amount for store in all_stores])
+
+
+class BudgetDetailType(graphene.ObjectType):
+	name = graphene.String()
+	amount = graphene.Float()
+	amount_spent = graphene.Float()
+	description = graphene.String()
+	start_date = graphene.Date()
+	end_date = graphene.Date()
+	status = graphene.String()
+	budget_items = graphene.List(BudgetItemType)
 
 
 class BehaviorType(DjangoObjectType):

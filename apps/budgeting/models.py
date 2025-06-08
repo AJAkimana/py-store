@@ -45,7 +45,8 @@ class BudgetItem(BaseModel):
 	budget = models.ForeignKey(
 		Budget,
 		related_name='budget_items',
-		on_delete=models.PROTECT
+		on_delete=models.PROTECT,
+		null=True
 	)
 	is_recurring = models.BooleanField(default=False)
 

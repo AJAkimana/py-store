@@ -82,6 +82,7 @@ class CreateBudgetItems(graphene.Mutation):
 		if budget.status == 'approved':
 			raise GraphQLError("You can add items to the approved budget")
 		for item in kwargs['items']:
+			item['user_id'] = info.context.user.id
 			has_saved = BudgetItem.objects.filter(
 				name=item['name'],
 				amount=item['amount'], budget=budget).first()

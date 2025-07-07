@@ -49,6 +49,12 @@ class BudgetItem(BaseModel):
 		null=True
 	)
 	is_recurring = models.BooleanField(default=False)
+	user = models.ForeignKey(
+		User,
+		related_name='user_budget_items',
+		on_delete=models.PROTECT,
+		null=True
+	)
 
 	class Meta:
 		db_table = "budget_items"

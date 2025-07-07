@@ -72,7 +72,7 @@ class BudgetingQuery(graphene.ObjectType):
 		if budget is not None:
 			budget_items = list(budget.budget_items.all())
 
-		recurring_items = list(BudgetItem.objects.filter(is_recurring=True))
+		recurring_items = list(BudgetItem.objects.filter(is_recurring=True, user=user))
 		budget_items.extend(recurring_items)
 
 		return {

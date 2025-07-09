@@ -85,7 +85,7 @@ class CreateBudgetItems(graphene.Mutation):
 			item['user_id'] = info.context.user.id
 			has_saved = BudgetItem.objects.filter(
 				name=item['name'],
-				amount=item['amount'], budget=budget).first()
+				amount=item['amount'], user=budget.user).first()
 			if not has_saved:
 				if not item['is_recurring']:
 					item['budget_id'] = kwargs['budget_id']

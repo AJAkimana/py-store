@@ -79,6 +79,7 @@ user(obj): 'User' object containing details of the logged in users
 		password = graphene.String()
 
 	def mutate(self, info, email, password, **kwargs):
+		print(f'Login attempt with email: {email} and password: {password}')
 		user_auth = authenticate(email=email, password=password)
 
 		if user_auth is None:

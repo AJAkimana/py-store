@@ -32,7 +32,7 @@ SECRET_KEY = os.getenv("SECRET", '')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.getenv('DEBUG', '') == 'true')
 
-ALLOWED_HOSTS = ['.akimanaja.com', '165.227.5.239', 'localhost']
+ALLOWED_HOSTS = ['.akimanaja.com', '165.227.5.239', 'localhost', '192.168.1.130', '192.168.1.110']
 
 # Application definition
 
@@ -159,9 +159,9 @@ AUTHENTICATION_BACKENDS = [
 ]
 AUTH_USER_MODEL = 'users.User'
 CORS_ORIGIN_WHITELIST = (
-	'http://localhost:8080',
 	'http://localhost:8000',
-	'http://localhost:3000'
+	'http://localhost:3000',
+	'http://192.168.1.110:8080'
 )
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/

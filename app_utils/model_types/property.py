@@ -6,7 +6,7 @@ from apps.stores.models import Store
 
 class DetailType(DjangoObjectType):
 	class Meta:
-		model = Store
+		model = PropDetail
 		fields = '__all__'
 
 

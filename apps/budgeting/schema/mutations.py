@@ -1,11 +1,12 @@
 import graphene
+from django.db.models import Q
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
 from app_utils.database import get_model_object
-from app_utils.model_types.store import BudgetItemInputType, BudgetType
+from app_utils.model_types.store import BudgetItemInputType, BudgetType, UserBudgetLineType, BudgetLineType
 from app_utils.validations.validate_budget import ValidateBudget
-from apps.budgeting.models import Budget, BudgetItem
+from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine
 from apps.households.models import Household
 
 
@@ -101,7 +102,57 @@ class CreateBudgetItems(graphene.Mutation):
 		)
 
 
+class CreateBudgetLine(graphene.Mutation):
+	message = graphene.String()
+	budget_line = graphene.Field(BudgetLineType)
+
+	class Arguments:
+		name = graphene.String(required=True)
+		description = graphene.String(required=False)
+		amount = graphene.Float(required=False)
+		active = graphene.Boolean(required=False)
+		is_system = graphene.Boolean(required=False)
+
+	@login_required
+	def mutate(self, info, **kwargs):
+		name = kwargs['name']
+		is_system = kwargs['is_system'] or False
+		if not name.strip():
+			raise GraphQLError("The 'name' field can't be empty")
+
+		name = name.strip().capitalize()
+		BudgetLine = DefaultBudgetLine if is_system else UserBudgetLine
+		filter = Q(name=name)
+		if not is_system:
+			filter &= Q(user=info.context.user)
+		budget_line = BudgetLine.objects.filter(filter)
+		if budget_line.exists():
+			raise GraphQLError(f"The budget line with name '{name}' already exists")
+		budget_line = BudgetLine(
+			name=name,
+			description=kwargs.get('description', ''),
+			active=kwargs.get('active', True),
+		)
+		if not is_system:
+			budget_line.user = info.context.user
+			budget_line.amount = kwargs.get('amount', 0.0)
+		budget_line.save()
+
+		return CreateBudgetLine(
+			message='Successfully saved',
+			budget_line=BudgetLineType(
+				id=budget_line.id,
+				name=budget_line.name,
+				description=budget_line.description,
+				amount=0.0 if is_system else budget_line.amount,
+				is_system=is_system,
+				enabled=budget_line.active
+			)
+		)
+
+
 class BudgetMutations(graphene.ObjectType):
 	create_budget = CreateBudget.Field()
 	update_budget = UpdateBudget.Field()
 	create_budget_items = CreateBudgetItems.Field()
+	create_budget_line = CreateBudgetLine.Field()

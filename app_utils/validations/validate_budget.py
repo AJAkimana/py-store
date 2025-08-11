@@ -2,7 +2,8 @@ from graphql import GraphQLError
 
 from app_utils.constants import BUDGET_STATUSES
 from app_utils.database import SaveContextManager, query_runner
-from apps.budgeting.models import Budget
+from app_utils.validations.base_validator import BaseValidator
+from apps.budgeting.models import Budget, DefaultBudgetLine, UserBudgetLine
 
 
 class ValidateBudget:
@@ -11,11 +12,11 @@ class ValidateBudget:
 
 	def validate_and_save(self, budget: Budget):
 		"""
-    Args:
-      budget: The store instance
+		Args:
+			budget: The store instance
 
-    Returns: new updated budget after it has been saved into database
-    """
+		Returns: new updated budget after it has been saved into database
+		"""
 		budget_id = self.budget.get('id', None)
 		for key, value in self.budget.items():
 			if isinstance(value, str) and value.strip() == '':
@@ -45,3 +46,21 @@ class ValidateBudget:
 
 		with SaveContextManager(budget, model=Budget):
 			return budget
+
+
+class ValidateDefaultBudgetLine(BaseValidator):
+	def validate_and_save(self, budget_line: DefaultBudgetLine):
+		self.check_empty_fields(exclude=['id'])
+
+		self.check_duplicate(filter_fields=['name'])
+		with SaveContextManager(budget_line, model=DefaultBudgetLine):
+			return budget_line
+
+
+class ValidateUserBudgetLine(BaseValidator):
+	def validate_and_save(self, budget_line: UserBudgetLine):
+		self.check_empty_fields(exclude=['id'])
+
+		self.check_duplicate(filter_fields=['name', 'user'])
+		with SaveContextManager(budget_line, model=UserBudgetLine):
+			return budget_line

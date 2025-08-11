@@ -5,7 +5,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from apps.behavior_ip.models import Behavior
-from apps.budgeting.models import Budget, BudgetItem
+from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 from apps.manage_system.models import Salary
@@ -53,6 +53,23 @@ class BudgetType(DjangoObjectType):
 			amount += sum([store.amount for store in it.stores.all()])
 		return amount
 
+
+class DefaultBudgetLineType(DjangoObjectType):
+	class Meta:
+		model = DefaultBudgetLine
+
+
+class UserBudgetLineType(DjangoObjectType):
+	class Meta:
+		model = UserBudgetLine
+
+class BudgetLineType(graphene.ObjectType):
+	id = graphene.String(required=True)
+	name = graphene.String()
+	description = graphene.String()
+	amount = graphene.Float()
+	is_system = graphene.Boolean()
+	enabled = graphene.Boolean()
 
 class BudgetItemType(DjangoObjectType):
 	class Meta:

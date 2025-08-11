@@ -4,7 +4,7 @@ from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
 from app_utils.database import get_model_object
-from app_utils.model_types.store import BudgetItemInputType, BudgetType, UserBudgetLineType, BudgetLineType
+from app_utils.model_types.store import BudgetItemInputType, BudgetType, BudgetLineType
 from app_utils.validations.validate_budget import ValidateBudget
 from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine
 from apps.households.models import Household

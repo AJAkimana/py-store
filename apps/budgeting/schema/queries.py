@@ -106,7 +106,7 @@ class BudgetingQuery(graphene.ObjectType):
 		if is_setup:
 			user_lines = UserBudgetLine.objects.filter(user=user)
 		for line in default_lines:
-			enabled = line.active
+			enabled = line.enabled
 			if not is_setup:
 				enabled = user_lines.filter(name=line.name).exists()
 			all_lines.append(BudgetLineType(
@@ -129,7 +129,7 @@ class BudgetingQuery(graphene.ObjectType):
 					description=line.description,
 					amount=line.amount,
 					is_system=False,
-					enabled=line.active
+					enabled=line.enabled
 				))
 
 		return all_lines

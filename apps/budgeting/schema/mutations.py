@@ -114,29 +114,36 @@ class CreateBudgetLine(graphene.Mutation):
 		is_system = graphene.Boolean(required=False)
 
 	@login_required
-	def mutate(self, info, **kwargs):
-		name = kwargs['name']
-		is_system = kwargs['is_system'] or False
+	def mutate(self, info, is_system,  **kwargs):
+		user = info.context.user
+		name = kwargs.get('name', '')
 		if not name.strip():
 			raise GraphQLError("The 'name' field can't be empty")
 
 		name = name.strip().capitalize()
 		BudgetLine = DefaultBudgetLine if is_system else UserBudgetLine
-		filter = Q(name=name)
+		filters = Q(name=name)
 		if not is_system:
-			filter &= Q(user=info.context.user)
-		budget_line = BudgetLine.objects.filter(filter)
-		if budget_line.exists():
-			raise GraphQLError(f"The budget line with name '{name}' already exists")
-		budget_line = BudgetLine(
-			name=name,
-			description=kwargs.get('description', ''),
-			active=kwargs.get('active', True),
-		)
-		if not is_system:
-			budget_line.user = info.context.user
-			budget_line.amount = kwargs.get('amount', 0.0)
-		budget_line.save()
+			filters &= Q(user=user)
+		budget_line = BudgetLine.objects.filter(filters).first()
+
+		if budget_line:
+			if budget_line.active:
+				raise GraphQLError(f"The budget line with name '{name}' already exists")
+			else:
+				budget_line.active = True
+				budget_line.enabled = True
+				budget_line.save()
+		else:
+			budget_line = BudgetLine(
+				name=name,
+				description=kwargs.get('description', kwargs['name']),
+				active=kwargs.get('active', True),
+			)
+			if not is_system:
+				budget_line.user = info.context.user
+				budget_line.amount = kwargs.get('amount', 0.0)
+			budget_line.save()
 
 		return CreateBudgetLine(
 			message='Successfully saved',
@@ -146,13 +153,56 @@ class CreateBudgetLine(graphene.Mutation):
 				description=budget_line.description,
 				amount=0.0 if is_system else budget_line.amount,
 				is_system=is_system,
-				enabled=budget_line.active
+				enabled=budget_line.enabled
 			)
 		)
 
+
+class DeleteBudgetLine(graphene.Mutation):
+	message = graphene.String()
+
+	class Arguments:
+		id = graphene.String(required=True)
+		is_system = graphene.Boolean(required=True)
+
+	@login_required
+	def mutate(self, info, id, is_system=False, **kwargs):
+		BudgetLine = DefaultBudgetLine if is_system else UserBudgetLine
+		budget_line = get_model_object(BudgetLine, 'id', id)
+		if not budget_line:
+			raise GraphQLError('Budget line not found')
+		budget_filter = Q(d_budget_line__id=id) if is_system else Q(u_budget_line__id=id)
+		budget_items = BudgetItem.objects.filter(budget_filter)
+		if budget_items.exists():
+			budget_line.active = False
+			budget_line.enabled = False
+			budget_line.save()
+		else:
+			budget_line.hard_delete()
+		return DeleteBudgetLine(message='Successfully deleted')
+
+
+class EnableBudgetLine(graphene.Mutation):
+	message = graphene.String()
+
+	class Arguments:
+		id = graphene.String(required=True)
+		is_system = graphene.Boolean(required=True)
+
+	@login_required
+	def mutate(self, info, id, is_system=False, **kwargs):
+		BudgetLine = DefaultBudgetLine if is_system else UserBudgetLine
+		budget_line = get_model_object(BudgetLine, 'id', id)
+		if not budget_line:
+			raise GraphQLError('Budget line not found')
+		budget_line.enabled = not budget_line.enabled
+		budget_line.save()
+		return EnableBudgetLine(message='Successfully enabled')
 
 class BudgetMutations(graphene.ObjectType):
 	create_budget = CreateBudget.Field()
 	update_budget = UpdateBudget.Field()
 	create_budget_items = CreateBudgetItems.Field()
 	create_budget_line = CreateBudgetLine.Field()
+	delete_budget_line = DeleteBudgetLine.Field()
+	enable_budget_line = EnableBudgetLine.Field()

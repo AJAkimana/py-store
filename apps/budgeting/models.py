@@ -12,6 +12,7 @@ class DefaultBudgetLine(BaseModel):
 	name = models.CharField(max_length=100)
 	description = models.TextField(blank=True)
 	active = models.BooleanField(default=True)
+	enabled = models.BooleanField(default=True)
 
 	class Meta:
 		db_table = "default_budget_lines"
@@ -27,6 +28,7 @@ class UserBudgetLine(BaseModel):
 	name = models.CharField(max_length=100)
 	description = models.TextField(blank=True)
 	active = models.BooleanField(default=True)
+	enabled = models.BooleanField(default=True)
 	amount = models.DecimalField(max_digits=12, decimal_places=2)
 	user = models.ForeignKey(User, related_name='user_budget_lines', on_delete=models.PROTECT)
 

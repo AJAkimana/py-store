@@ -1,6 +1,7 @@
 import uuid
 from typing import Dict, Any
 
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser
@@ -8,6 +9,7 @@ from django.contrib.auth.models import PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 
 from apps.users.manager import UserManager
+from d2dstore.models import BaseModel
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -84,3 +86,73 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 	def get_user_budget_items(self, filters):
 		return self.budget_items.filter(filters)
+
+
+class Currency(BaseModel):
+	"""
+	A minimal ISO-4217 currency model for populating the Default Currency select.
+	Seed with common currencies (USD/EUR/GBP, etc.).
+	"""
+	code = models.CharField(max_length=3, unique=True, help_text="ISO 4217 code, e.g., USD, EUR, GBP.")
+	name = models.CharField(max_length=64, help_text="Display name, e.g., US Dollar, Euro.")
+	symbol = models.CharField(max_length=8, blank=True, help_text="Optional symbol, e.g., $, €, £.")
+	minor_unit = models.PositiveSmallIntegerField(default=2, help_text="Number of decimal places, typically 2.")
+	is_active = models.BooleanField(default=True)
+
+	class Meta:
+		ordering = ["code"]
+
+	def __str__(self) -> str:
+		return f"{self.code} - {self.name}"
+
+
+class UserSettings(BaseModel):
+	"""
+	Per-user settings reflected in the screenshot:
+	- Notification toggles: email, push
+	- Budget alerts toggle + threshold (when approaching budget limits)
+	- Default currency selector
+	"""
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="settings")
+
+	# Notifications
+	email_notifications = models.BooleanField(
+		default=False,
+		help_text="Get updates and alerts via email.",
+	)
+	push_notifications = models.BooleanField(
+		default=False,
+		help_text="Get browser notifications for important updates.",
+	)
+
+	# Budget alerts
+	budget_alerts_enabled = models.BooleanField(
+		default=False,
+		help_text="Get notified when approaching budget limits.",
+	)
+	budget_alert_threshold = models.PositiveSmallIntegerField(
+		default=80,
+		validators=[MinValueValidator(1), MaxValueValidator(100)],
+		help_text="Trigger alert at this percent of budget used (1–100).",
+	)
+
+	# Currency settings
+	default_currency = models.ForeignKey(
+		Currency,
+		on_delete=models.PROTECT,
+		related_name="users_defaulting_to",
+		null=True,
+		blank=True,
+		help_text="User's default currency for amounts and budgets.",
+	)
+
+	# Timestamps
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		verbose_name = "User settings"
+		verbose_name_plural = "User settings"
+
+	def __str__(self) -> str:
+		return f"Settings for {self.user}"

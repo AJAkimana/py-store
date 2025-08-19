@@ -167,6 +167,31 @@ class SendConfirmationEmail(graphene.Mutation):
 		return SendConfirmationEmail(message=sent['message'], has_error=sent['has_error'])
 
 
+class ConfigureUserSettings(graphene.Mutation):
+	"""
+	This mutation is used to configure user settings like notifications, alert thresholds, and default currency.
+	"""
+	message = graphene.String()
+
+	class Arguments:
+		email_notifications = graphene.Boolean(required=False)
+		push_notifications = graphene.Boolean(required=False)
+		budget_alerts_enabled = graphene.Boolean(required=False)
+		budget_alert_threshold = graphene.Int(required=False)
+		default_currency = graphene.String(required=False)
+
+	@login_required
+	def mutate(self, info, **kwargs):
+		user = info.context.user
+
+		for key, value in kwargs.items():
+			if value is not None:
+				setattr(user.settings, key, value)
+
+		user.settings.save()
+		return ConfigureUserSettings(message='Settings updated successfully')
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
@@ -175,3 +200,4 @@ class UserMutations(graphene.ObjectType):
 	update_registered_user = UpdateRegisteredUser.Field()
 	logout_user = LogoutUser.Field()
 	send_confirmation_email = SendConfirmationEmail.Field()
+	configure_user_settings = ConfigureUserSettings.Field()

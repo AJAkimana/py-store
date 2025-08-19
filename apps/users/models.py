@@ -140,15 +140,11 @@ class UserSettings(BaseModel):
 	default_currency = models.ForeignKey(
 		Currency,
 		on_delete=models.PROTECT,
-		related_name="users_defaulting_to",
+		related_name="default_users_currency",
 		null=True,
 		blank=True,
 		help_text="User's default currency for amounts and budgets.",
 	)
-
-	# Timestamps
-	created_at = models.DateTimeField(auto_now_add=True)
-	updated_at = models.DateTimeField(auto_now=True)
 
 	class Meta:
 		verbose_name = "User settings"

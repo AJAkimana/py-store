@@ -2,8 +2,8 @@ import graphene
 from graphql_jwt.decorators import login_required,\
 	superuser_required
 from django.db.models import Q
-from app_utils.model_types.user import UserType,\
-	PaginatorUserType, WelcomeType
+from app_utils.model_types.user import UserType, \
+	PaginatorUserType, WelcomeType, UserSettingsType
 from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
 from apps.users.models import User
 
@@ -16,6 +16,7 @@ class UserQuery(graphene.ObjectType):
 		search=graphene.String(),
 		page_count=graphene.Int(),
 		page_number=graphene.Int())
+	user_settings = graphene.Field(UserSettingsType)
 
 	@login_required
 	def resolve_me(self, info, **kwargs):
@@ -41,3 +42,11 @@ class UserQuery(graphene.ObjectType):
 	def resolve_welcome(self, info, **kwargs):
 		message = 'Welcome to the D2DStore system'
 		return {'message': message}
+
+	@login_required
+	def resolve_user_settings(self, info, **kwargs):
+		user = info.context.user
+		settings = user.settings if hasattr(user, 'settings') else None
+		if settings is None:
+			return UserSettingsType()
+		return settings

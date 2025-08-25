@@ -9,7 +9,7 @@ from graphql_jwt.shortcuts import get_token
 from app_utils.database import get_model_object
 from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
-from apps.users.models import User
+from apps.users.models import User, UserSettings, Currency
 from app_utils.model_types.user import UserType
 
 
@@ -184,9 +184,14 @@ class ConfigureUserSettings(graphene.Mutation):
 	def mutate(self, info, **kwargs):
 		user = info.context.user
 
+		if not hasattr(user, 'settings'):
+			user.settings = UserSettings(user=user)
 		for key, value in kwargs.items():
 			if value is not None:
-				setattr(user.settings, key, value)
+				new_value = value
+				if key == 'default_currency':
+					new_value = get_model_object(Currency, 'id', value)
+				setattr(user.settings, key, new_value)
 
 		user.settings.save()
 		return ConfigureUserSettings(message='Settings updated successfully')

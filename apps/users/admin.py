@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
-from apps.users.models import User
-from apps.users.forms import UserChangeForm, UserCreationForm
+from apps.users.models import User, Currency
+from apps.users.forms import UserChangeForm, UserCreationForm, CurrencyChangeForm, CurrencyCreationForm
 
 
 @admin.register(User)
@@ -30,3 +30,20 @@ class UserAdmin(BaseUserAdmin):
 	search_fields = ['user_name', 'first_name', 'last_name', 'email']
 
 
+@admin.register(Currency)
+class CurrencyAdmin(admin.ModelAdmin):
+	add_form = CurrencyCreationForm
+	form = CurrencyChangeForm
+	model = Currency
+	list_display = ['name', 'code', 'symbol', 'minor_unit', 'is_active']
+	list_filter = ['name', 'code', 'is_active']
+	fieldsets = (
+		(_('Detailed Information'), {'fields': ('name', 'code', 'symbol', 'minor_unit', 'is_active')}),
+	)
+	add_fieldsets = (
+		(None, {
+			'classes': ('wide',),
+			'fields': ['name', 'code', 'symbol', 'minor_unit', 'is_active']
+		}),
+	)
+	search_fields = ['name', 'code']

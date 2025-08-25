@@ -3,9 +3,9 @@ from graphql_jwt.decorators import login_required,\
 	superuser_required
 from django.db.models import Q
 from app_utils.model_types.user import UserType, \
-	PaginatorUserType, WelcomeType, UserSettingsType
+	PaginatorUserType, WelcomeType, UserSettingsType, CurrencyType
 from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
-from apps.users.models import User
+from apps.users.models import User, Currency, UserSettings
 
 
 class UserQuery(graphene.ObjectType):
@@ -17,6 +17,7 @@ class UserQuery(graphene.ObjectType):
 		page_count=graphene.Int(),
 		page_number=graphene.Int())
 	user_settings = graphene.Field(UserSettingsType)
+	currencies = graphene.List(CurrencyType)
 
 	@login_required
 	def resolve_me(self, info, **kwargs):
@@ -48,5 +49,20 @@ class UserQuery(graphene.ObjectType):
 		user = info.context.user
 		settings = user.settings if hasattr(user, 'settings') else None
 		if settings is None:
-			return UserSettingsType()
+			# Default settings
+			return UserSettingsType(
+				email_notifications=True,
+				email_notifications_help_text=UserSettings._meta.get_field("email_notifications").help_text,
+				push_notifications=True,
+				push_notifications_help_text=UserSettings._meta.get_field("push_notifications").help_text,
+				budget_alerts_enabled=True,
+				budget_alerts_enabled_help_text=UserSettings._meta.get_field("budget_alerts_enabled").help_text,
+				budget_alert_threshold=80,
+				budget_alert_threshold_help_text=UserSettings._meta.get_field("budget_alert_threshold").help_text,
+				default_currency=None
+			)
 		return settings
+
+	@login_required
+	def resolve_currencies(self, info, **kwargs):
+		return Currency.objects.all()

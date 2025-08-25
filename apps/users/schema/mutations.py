@@ -60,8 +60,8 @@ class LoginUser(graphene.Mutation):
 Login a users with their credentials
 
 args:
-password(str): users's registered password
-email(str): users's registered email
+password(str): user's registered password
+email(str): user's registered email
 
 returns:
 message(str): success messsage confirming login

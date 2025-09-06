@@ -21,6 +21,7 @@ class CreateEditBudget(graphene.Mutation):
 		end_date = graphene.Date(required=True)
 		description = graphene.String(required=False)
 		household_id = graphene.String(required=True)
+		items = graphene.List(BudgetItemInputType)
 
 	def mutate(self, into, **kwargs):
 		pass

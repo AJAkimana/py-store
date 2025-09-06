@@ -41,8 +41,8 @@ class BudgetType(DjangoObjectType):
 	class Meta:
 		model = Budget
 
-	amount = graphene.Float(required=True)
-	amount_spent = graphene.Float(required=True)
+	amount = graphene.Float()
+	amount_spent = graphene.Float()
 
 	def resolve_amount(self, info, **kwargs):
 		return sum([it.amount for it in self.budget_items.all()])
@@ -75,7 +75,7 @@ class BudgetItemType(DjangoObjectType):
 	class Meta:
 		model = BudgetItem
 
-	amount_spent = graphene.Float(required=True)
+	amount_spent = graphene.Float()
 
 	def resolve_amount_spent(self, info, **kwargs):
 		# Filter stores using 1st day of the month and current date

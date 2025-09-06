@@ -5,7 +5,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from apps.behavior_ip.models import Behavior
-from apps.budgeting.models import Budget, BudgetItem
+from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 from apps.manage_system.models import Salary
@@ -41,8 +41,8 @@ class BudgetType(DjangoObjectType):
 	class Meta:
 		model = Budget
 
-	amount = graphene.Float(required=True)
-	amount_spent = graphene.Float(required=True)
+	amount = graphene.Float()
+	amount_spent = graphene.Float()
 
 	def resolve_amount(self, info, **kwargs):
 		return sum([it.amount for it in self.budget_items.all()])
@@ -54,11 +54,28 @@ class BudgetType(DjangoObjectType):
 		return amount
 
 
+class DefaultBudgetLineType(DjangoObjectType):
+	class Meta:
+		model = DefaultBudgetLine
+
+
+class UserBudgetLineType(DjangoObjectType):
+	class Meta:
+		model = UserBudgetLine
+
+class BudgetLineType(graphene.ObjectType):
+	id = graphene.String(required=True)
+	name = graphene.String()
+	description = graphene.String()
+	amount = graphene.Float()
+	is_system = graphene.Boolean()
+	enabled = graphene.Boolean()
+
 class BudgetItemType(DjangoObjectType):
 	class Meta:
 		model = BudgetItem
 
-	amount_spent = graphene.Float(required=True)
+	amount_spent = graphene.Float()
 
 	def resolve_amount_spent(self, info, **kwargs):
 		# Filter stores using 1st day of the month and current date

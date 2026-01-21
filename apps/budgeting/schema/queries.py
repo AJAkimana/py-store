@@ -7,7 +7,7 @@ from graphql_jwt.decorators import login_required
 from app_utils.helpers import get_budgets_filter, paginate_data, is_valid_uuid
 from app_utils.model_types.store import BudgetPaginatorType, BudgetDetailType, UserBudgetLineType, \
     DefaultBudgetLineType, BudgetLineType
-from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine
+from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine, UserDefaultBudgetLine
 from apps.household_members.helpers import get_member_filter
 from apps.users.models import User
 
@@ -106,36 +106,48 @@ class BudgetingQuery(graphene.ObjectType):
     def resolve_all_budget_lines(self, info, is_global_setup=False, is_app_setup=False):
         user = info.context.user
         is_setup = is_global_setup and user.is_superuser
-        def_filter = Q() if is_setup else Q(enabled=True)
-        default_lines = DefaultBudgetLine.objects.filter(def_filter)
-        all_lines = []
-        user_lines = UserBudgetLine.objects.none()
-        if not is_setup:
-            user_lines = UserBudgetLine.objects.filter(user=user)
-        for line in default_lines:
-            enabled = line.enabled
-            if not is_setup:
-                enabled = user_lines.filter(name=line.name).exists()
-            all_lines.append(BudgetLineType(
-                id=line.id,
-                name=line.name,
-                description=line.description,
-                amount=0,
-                is_system=True,
-                enabled=enabled
-            ))
+        default_filter = Q() if is_setup else Q(enabled=True)
+        default_lines = DefaultBudgetLine.objects.filter(default_filter)
+
         if is_setup:
-            return all_lines
+            return [to_line_type(line, is_system=True) for line in default_lines]
 
-        for line in user_lines:
-            if not any(l.name == line.name for l in all_lines):
-                all_lines.append(BudgetLineType(
-                    id=line.id,
-                    name=line.name,
-                    description=line.description,
-                    amount=line.amount,
-                    is_system=False,
-                    enabled=line.enabled
-                ))
+        user_lines = UserBudgetLine.objects.filter(user=user)
+        user_default_filter = Q(user=user) if is_app_setup else Q(
+            user=user, enabled=True)
+        user_default_lines = UserDefaultBudgetLine.objects.filter(
+            user_default_filter).select_related('line')
 
-        return all_lines
+        if is_app_setup:
+            user_default_map = {udl.line.id: udl for udl in user_default_lines}
+            default_line_types = []
+            for dl in default_lines:
+                # Find if there's a user default line for this default line
+                udl = user_default_map.get(dl.id)
+                if udl:
+                    # If found, use its enabled status
+                    udl.line.enabled = udl.enabled
+                    default_line_types.append(
+                        to_line_type(udl.line, is_system=True))
+                else:
+                    # If not found, use the default line as is
+                    dl.enabled = False
+                    default_line_types.append(to_line_type(dl, is_system=True))
+        else:
+            default_line_types = [
+                to_line_type(udl.line, is_system=True) for udl in user_default_lines
+            ]
+
+        user_line_types = [to_line_type(line) for line in user_lines]
+        return default_line_types + user_line_types
+
+
+def to_line_type(line, is_system=False):
+    return BudgetLineType(
+        id=line.id,
+        name=line.name,
+        description=line.description,
+        amount=0,
+        is_system=is_system,
+        enabled=line.enabled
+    )

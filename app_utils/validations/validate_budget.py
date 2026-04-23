@@ -37,12 +37,12 @@ class ValidateBudget:
 
         # Check date collisions for same user
         conditions = f"""
-			user_id='{budget.user.id}' AND (
-				("start_date" BETWEEN '{budget.start_date}' AND '{budget.end_date}') OR
-				("end_date" BETWEEN '{budget.start_date}' AND '{budget.end_date}') OR
-				("start_date" < '{budget.start_date}' AND "end_date" > '{budget.end_date}')
-			)
-		"""
+					user_id='{budget.user.id}' AND (
+						("start_date" BETWEEN '{budget.start_date}' AND '{budget.end_date}') OR
+						("end_date" BETWEEN '{budget.start_date}' AND '{budget.end_date}') OR
+						("start_date" < '{budget.start_date}' AND "end_date" > '{budget.end_date}')
+					)
+				"""
         if budget_id:
             conditions += f" AND id != '{budget_id}'"
         query = f"SELECT * FROM budgets WHERE {conditions} LIMIT 1"
@@ -140,9 +140,9 @@ class ValidateBudget:
             if 'user' in item:
                 bi.user_id = item.get('user')
             if 'u_budget_line_id' in item:
-                bi.u_budget_line_id = item.get('u_budget_line')
-            if 'd_budget_line' in item:
-                bi.d_budget_line_id = item.get('d_budget_line')
+                bi.u_budget_line_id = item.get('u_budget_line_id')
+            if 'd_budget_line_id' in item:
+                bi.d_budget_line_id = item.get('d_budget_line_id')
             with SaveContextManager(bi, model=BudgetItem):
                 pass
 

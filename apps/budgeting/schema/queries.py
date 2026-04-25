@@ -56,37 +56,15 @@ class BudgetingQuery(graphene.ObjectType):
         budget = Budget.objects.filter(search_filter).first()
         recurring_items = []
         if budget is not None:
-            recurring_items = budget.budget_items.filter(is_recurring=True)
-            budget.budget_items.append(recurring_items)
-            return budget
+            recurring_items = list(budget.budget_items.all())
+            _budget = budget.__dict__
+            _budget['budget_items'] = recurring_items
+
+            return _budget
 
         return {
             "name": budget.name if budget else "Not set",
             "budget_items": recurring_items
-        }
-
-    @login_required
-    def resolve_current_budget(self, info, budget_id=None):
-        user = info.context.user
-        search_filter = Q(user=user)
-        if budget_id is not None and is_valid_uuid(budget_id):
-            search_filter &= Q(id=budget_id)
-        else:
-            today = date.today()
-            search_filter &= Q(start_date__lte=today,
-                               end_date__gte=today, status='approved')
-
-        budget = Budget.objects.filter(search_filter).first()
-        budget_items = []
-        if budget is not None:
-            budget_items = list(budget.budget_items.all())
-
-        recurring_items = list(BudgetItem.objects.filter(
-            is_recurring=True, user_id=user.id))
-        budget_items.extend(recurring_items)
-
-        return {
-            "budget_items": budget_items
         }
 
     @login_required

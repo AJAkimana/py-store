@@ -11,7 +11,6 @@ def fetch_currencies(base_currency: str, period: str = 'latest') -> dict[str, An
     """
     Fetch currencies by base code and return API response as-is.
     """
-    url = CURRENCY_API_URL + '{currency}.json'
     base = (base_currency or '').strip().lower()
     if not base:
         return {'date': date.today().isoformat(), 'UNKNOWN': {'UNKNOWN': 1}}
@@ -22,10 +21,10 @@ def fetch_currencies(base_currency: str, period: str = 'latest') -> dict[str, An
         except ValueError:
             return {'date': date.today().isoformat(), base: {base: 1}}
 
-    url = CURRENCY_API_URL.format(period=period)
+    url = CURRENCY_API_URL.format(period=period) + f'/{base}.json'
     client = RequestClient[dict[str, Any]]()
     response = client.request(
-        url=url.format(period=period, currency=base),
+        url=url,
         expected_type=dict,
         default={},
     )
@@ -41,14 +40,15 @@ def exchange_currencies(amount: float = 1, base_currency: str = 'usd', target_cu
     Exchange amount from base currency to target currencies using fetched rates.
     """
     currency_data = fetch_currencies(base_currency, period)
-    date = currency_data.get('date', date.today().isoformat())
+    todate = currency_data.get('date', date.today().isoformat())
     rates = currency_data.get(base_currency, {})
+
     results = []
     for target in target_currencies:
         rate = rates.get(target.lower())
         if rate is not None:
             results.append({
-                'date': date,
+                'date': todate,
                 'base': base_currency.upper(),
                 'target': target.upper(),
                 'amount': amount,

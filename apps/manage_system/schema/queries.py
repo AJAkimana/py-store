@@ -4,37 +4,49 @@ from graphql import GraphQLError
 from graphql_jwt.decorators import login_required, superuser_required
 
 from app_utils.helpers import paginate_data, PAGINATION_DEFAULT
-from app_utils.model_types.manager import DbBackupType
+from app_utils.model_types.manager import ConvertedCurrencyType, DbBackupType
 from app_utils.model_types.store import SalaryPaginatorType
 from apps.manage_system.models import Salary
 from apps.stores.models import Store
 
 
 class ManageSystemQuery(graphene.ObjectType):
-	db_backup = graphene.Field(DbBackupType)
-	salaries = graphene.Field(
-		SalaryPaginatorType,
-		created_at=graphene.Date(),
-		page_count=graphene.Int(),
-		page_number=graphene.Int(),
-	)
+    db_backup = graphene.Field(DbBackupType)
+    salaries = graphene.Field(
+        SalaryPaginatorType,
+        created_at=graphene.Date(),
+        page_count=graphene.Int(),
+        page_number=graphene.Int(),
+    )
+    rate_currencies = graphene.List(
+        ConvertedCurrencyType,
+        amount=graphene.Float(),
+        base_currency=graphene.String(),
+        target_currencies=graphene.List(graphene.String),
+        period=graphene.String()
+    )
 
-	@login_required
-	def resolve_db_backup(self, info, **kwargs):
-		try:
-			call_command('dbbackup')
-			# print('Db backed up')
-			res = {'message': 'Db backed up'}
-			return res
-		except Exception as error:
-			print(error)
-			raise GraphQLError('Error while backup')
+    @login_required
+    def resolve_db_backup(self, info, **kwargs):
+        try:
+            call_command('dbbackup')
+            # print('Db backed up')
+            res = {'message': 'Db backed up'}
+            return res
+        except Exception as error:
+            print(error)
+            raise GraphQLError('Error while backup')
 
-	@superuser_required
-	def resolve_salaries(self, info, created_at=None, **kwargs):
-		page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
-		page_number = kwargs.get('page_number', PAGINATION_DEFAULT['page_number'])
-		salaries = Salary.objects.all()
-		paginated_result = paginate_data(salaries, page_count, page_number)
+    @superuser_required
+    def resolve_salaries(self, info, created_at=None, **kwargs):
+        page_count = kwargs.get('page_count', PAGINATION_DEFAULT['page_count'])
+        page_number = kwargs.get(
+            'page_number', PAGINATION_DEFAULT['page_number'])
+        salaries = Salary.objects.all()
+        paginated_result = paginate_data(salaries, page_count, page_number)
 
-		return paginated_result
+        return paginated_result
+
+    def resolve_rate_currencies(self, info, amount=1, base_currency='usd', target_currencies=['usd'], period='latest', **kwargs):
+        from app_utils.poxies.currency_proxy import exchange_currencies
+        return exchange_currencies(amount, base_currency, target_currencies, period)

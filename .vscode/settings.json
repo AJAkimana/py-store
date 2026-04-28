@@ -19,5 +19,6 @@
 	},
 	"[markdown]": {
 		"files.trimTrailingWhitespace": false
-	}
+	},
+	"python-envs.defaultEnvManager": "ms-python.python:pipenv"
 }

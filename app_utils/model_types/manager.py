@@ -8,7 +8,6 @@ class DbBackupType(graphene.ObjectType):
 class ConvertedCurrencyType(graphene.ObjectType):
     amount = graphene.Float()
     base = graphene.String()
-    amount = graphene.Float()
     converted_amount = graphene.Float()
     date = graphene.String()
     rate = graphene.Float()

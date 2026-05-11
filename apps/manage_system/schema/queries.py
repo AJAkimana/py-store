@@ -21,8 +21,8 @@ class ManageSystemQuery(graphene.ObjectType):
     rate_currencies = graphene.List(
         ConvertedCurrencyType,
         amount=graphene.Float(),
-        base_currency=graphene.String(),
-        target_currencies=graphene.List(graphene.String),
+        base=graphene.String(),
+        targets=graphene.List(graphene.String),
         period=graphene.String()
     )
 
@@ -47,6 +47,6 @@ class ManageSystemQuery(graphene.ObjectType):
 
         return paginated_result
 
-    def resolve_rate_currencies(self, info, amount=1, base_currency='usd', target_currencies=['usd'], period='latest', **kwargs):
+    def resolve_rate_currencies(self, info, amount=1, base='usd', targets=['usd'], period='latest', **kwargs):
         from app_utils.poxies.currency_proxy import exchange_currencies
-        return exchange_currencies(amount, base_currency, target_currencies, period)
+        return exchange_currencies(amount, base, targets, period)

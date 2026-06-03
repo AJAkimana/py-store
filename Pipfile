@@ -26,6 +26,7 @@ pyjwt = "==2.7.0"
 geoip2 = "==4.3.0"
 django-crontab = "==0.7.1"
 django-upgrade = "==1.22.2"
+rich = "==15.0.0"
 
 [requires]
 python_version = "3.10"

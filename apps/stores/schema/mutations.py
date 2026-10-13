@@ -23,6 +23,7 @@ class CreateEditStore(graphene.Mutation):
 		is_inflow = graphene.Boolean(required=True)
 		action_date = graphene.Date(required=True)
 		description = graphene.String(required=True)
+		notes = graphene.String(required=False)
 		is_recurring = graphene.Boolean(required=False)
 		household_id = graphene.String(required=True)
 
@@ -44,7 +45,7 @@ class CreateStore(CreateEditStore):
 
 		new_store = validator.validate_and_save_store(store)
 
-		if kwargs['is_recurring']:
+		if kwargs.get('is_recurring'):
 			RecurringStore.objects.get_or_create(user=user, name=kwargs['description'])
 		return CreateStore(message='Successfully saved', store=new_store)
 

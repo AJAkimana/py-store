@@ -22,7 +22,9 @@ class StoreQuery(graphene.ObjectType):
 		page_count=graphene.Int(),
 		page_number=graphene.Int(),
 		store_type=graphene.String(),
-		search_member=graphene.String()
+		search_member=graphene.String(),
+		transaction_type=graphene.String(),
+		budget_line_id=graphene.String()
 	)
 	total_inflow = graphene.Int(store_type=graphene.String())
 	total_outflow = graphene.Int(store_type=graphene.String())

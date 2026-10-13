@@ -9,7 +9,7 @@ from graphql_jwt.shortcuts import get_token
 from app_utils.database import get_model_object
 from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
-from apps.users.models import User
+from apps.users.models import User, UserSettings, Currency
 from app_utils.model_types.user import UserType
 
 
@@ -60,8 +60,8 @@ class LoginUser(graphene.Mutation):
 Login a users with their credentials
 
 args:
-password(str): users's registered password
-email(str): users's registered email
+password(str): user's registered password
+email(str): user's registered email
 
 returns:
 message(str): success messsage confirming login
@@ -167,6 +167,36 @@ class SendConfirmationEmail(graphene.Mutation):
 		return SendConfirmationEmail(message=sent['message'], has_error=sent['has_error'])
 
 
+class ConfigureUserSettings(graphene.Mutation):
+	"""
+	This mutation is used to configure user settings like notifications, alert thresholds, and default currency.
+	"""
+	message = graphene.String()
+
+	class Arguments:
+		email_notifications = graphene.Boolean(required=False)
+		push_notifications = graphene.Boolean(required=False)
+		budget_alerts_enabled = graphene.Boolean(required=False)
+		budget_alert_threshold = graphene.Int(required=False)
+		default_currency = graphene.String(required=False)
+
+	@login_required
+	def mutate(self, info, **kwargs):
+		user = info.context.user
+
+		if not hasattr(user, 'settings'):
+			user.settings = UserSettings(user=user)
+		for key, value in kwargs.items():
+			if value is not None:
+				new_value = value
+				if key == 'default_currency':
+					new_value = get_model_object(Currency, 'id', value)
+				setattr(user.settings, key, new_value)
+
+		user.settings.save()
+		return ConfigureUserSettings(message='Settings updated successfully')
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
@@ -175,3 +205,4 @@ class UserMutations(graphene.ObjectType):
 	update_registered_user = UpdateRegisteredUser.Field()
 	logout_user = LogoutUser.Field()
 	send_confirmation_email = SendConfirmationEmail.Field()
+	configure_user_settings = ConfigureUserSettings.Field()

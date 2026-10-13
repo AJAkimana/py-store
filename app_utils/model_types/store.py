@@ -16,6 +16,11 @@ class StoreType(DjangoObjectType):
     class Meta:
         model = Store
 
+    is_recurring = graphene.Boolean()
+
+    def resolve_is_recurring(self, info, **kwargs):
+        return RecurringStore.objects.filter(user=self.user, name=self.description).exists()
+
 
 class RecurringStoreType(DjangoObjectType):
     class Meta:

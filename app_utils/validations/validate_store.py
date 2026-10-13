@@ -21,10 +21,16 @@ class ValidateStore:
     """
 		property_id = self.store.pop('property_id', None)
 		budget_item_id = self.store.pop('budget_item_id', None)
+		notes = self.store.pop('notes', None)
+		self.store.pop('is_recurring', None)
 		store_id = self.store.get('id', None)
 		amount = self.store.get('amount', "")
 		if amount <= 0:
 			raise GraphQLError(f"Invalid amount")
+		if budget_item_id and self.store.get('is_inflow'):
+			raise GraphQLError("An income can't be linked to a budget")
+		if notes is not None:
+			store.notes = notes.strip()
 		for key, value in self.store.items():
 			if isinstance(value, str) and value.strip() == '':
 				raise GraphQLError(f"The {key} field can't be empty")
@@ -54,6 +60,9 @@ class ValidateStore:
 		if property_id:
 			store.property = get_model_object(Property, 'id', property_id)
 		if budget_item_id:
-			store.budget_item = get_model_object(BudgetItem, 'id', budget_item_id)
+			budget_item = get_model_object(BudgetItem, 'id', budget_item_id)
+			if budget_item.budget and budget_item.budget.user != store.user:
+				raise GraphQLError('Invalid budget line')
+			store.budget_item = budget_item
 		with SaveContextManager(store, model=Store):
 			return store

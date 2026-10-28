@@ -58,7 +58,10 @@ class ValidateStore:
 		if has_saved:
 			raise GraphQLError('The record has already been recorded')
 		if property_id:
-			store.property = get_model_object(Property, 'id', property_id)
+			prop = get_model_object(Property, 'id', property_id)
+			if prop.owner != store.user:
+				raise GraphQLError('Invalid asset')
+			store.property = prop
 		if budget_item_id:
 			budget_item = get_model_object(BudgetItem, 'id', budget_item_id)
 			if budget_item.budget and budget_item.budget.user != store.user:

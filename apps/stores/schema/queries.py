@@ -4,8 +4,9 @@ from django.db.models import Q
 from graphql_jwt.decorators import login_required, superuser_required
 
 from app_utils.background_task import send_weekly_summary, send_monthly_summary
+from app_utils.database import get_model_object
 from app_utils.helpers import paginate_data, dict_fetchall, get_aggregated_in_out, get_stores_filter
-from app_utils.model_types.store import StorePaginatorType, \
+from app_utils.model_types.store import StorePaginatorType, StoreType, \
 	MonthType, StoreRatioType, RecurringStorePaginatorType
 from apps.household_members.helpers import get_member_filter
 from apps.stores.models import Store
@@ -26,6 +27,7 @@ class StoreQuery(graphene.ObjectType):
 		transaction_type=graphene.String(),
 		budget_line_id=graphene.String()
 	)
+	store = graphene.Field(StoreType, id=graphene.String(required=True))
 	total_inflow = graphene.Int(store_type=graphene.String())
 	total_outflow = graphene.Int(store_type=graphene.String())
 	store_count = graphene.Int()
@@ -50,6 +52,11 @@ class StoreQuery(graphene.ObjectType):
 		paginated_result = paginate_data(stores, page_count, page_number)
 		paginated_result['aggregate'] = get_aggregated_in_out(stores)
 		return paginated_result
+
+	@login_required
+	def resolve_store(self, info, id):
+		user = info.context.user
+		return get_model_object(Store, 'id', id, manager_query=user.stores)
 
 	@login_required
 	def resolve_total_inflow(self, info, store_type='use', **kwargs):

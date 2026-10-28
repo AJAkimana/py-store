@@ -59,10 +59,13 @@ class UpdateStore(CreateEditStore):
 
 	@login_required
 	def mutate(self, info, **kwargs):
-		store = get_model_object(Store, 'id', kwargs.get('id'))
+		user = info.context.user
+		store = get_model_object(Store, 'id', kwargs.get('id'), manager_query=user.stores)
 		validator = ValidateStore(**kwargs)
 
 		updated_store = validator.validate_and_save_store(store)
+		if kwargs.get('is_recurring'):
+			RecurringStore.objects.get_or_create(user=user, name=kwargs['description'])
 		return UpdateStore(message='Successfully update', store=updated_store)
 
 

@@ -5,7 +5,8 @@ from django.db.models import Q
 from app_utils.model_types.user import UserType, \
 	PaginatorUserType, WelcomeType, UserSettingsType, CurrencyType
 from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
-from apps.users.models import User, Currency, UserSettings
+from apps.users.models import User, Currency, UserSettings, ThemeMode, \
+	DEFAULT_PRIMARY_COLOR, DEFAULT_SECONDARY_COLOR
 
 
 class UserQuery(graphene.ObjectType):
@@ -59,7 +60,10 @@ class UserQuery(graphene.ObjectType):
 				budget_alerts_enabled_help_text=UserSettings._meta.get_field("budget_alerts_enabled").help_text,
 				budget_alert_threshold=80,
 				budget_alert_threshold_help_text=UserSettings._meta.get_field("budget_alert_threshold").help_text,
-				default_currency=None
+				default_currency=None,
+				theme_mode=ThemeMode.LIGHT.value,
+				primary_color=DEFAULT_PRIMARY_COLOR,
+				secondary_color=DEFAULT_SECONDARY_COLOR,
 			)
 		return settings
 

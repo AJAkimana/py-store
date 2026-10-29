@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, logout
 from graphql_jwt.decorators import login_required, superuser_required
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import update_last_login
+from django.core.exceptions import ValidationError
 from graphql import GraphQLError
 # from graphql_jwt.utils import jwt_payload, jwt_encode
 from graphql_jwt.shortcuts import get_token, create_refresh_token, get_refresh_token
@@ -13,6 +14,8 @@ from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
 from apps.users.models import User, UserSettings, Currency
 from app_utils.model_types.user import UserType
+
+APPEARANCE_FIELDS = ('theme_mode', 'primary_color', 'secondary_color')
 
 
 class RegisterUser(graphene.Mutation):
@@ -134,7 +137,8 @@ The refresh token is rotated: the old one is revoked and a new cookie is set.
 
 class UpdateUserProfile(graphene.Mutation):
 	"""
-	This is a mutation used to create new users
+	Update the logged-in user's own profile. Only the fields sent are changed.
+	Passwords are changed through 'ResetPassword', which checks the old one.
 	"""
 	user = graphene.Field(UserType)
 	message = graphene.String()
@@ -143,16 +147,24 @@ class UpdateUserProfile(graphene.Mutation):
 		first_name = graphene.String()
 		last_name = graphene.String()
 		phone = graphene.String()
-		password = graphene.String()
-		only_password = graphene.Boolean()
 
 	@login_required
 	def mutate(self, info, **kwargs):
-		user = info.context
-		validator = ValidateUser(**kwargs)
-		new_user = validator.validate_and_save_user(user)
+		user = info.context.user
 
-		return UpdateUserProfile(message='Success', user=new_user)
+		for key, value in kwargs.items():
+			if value is None:
+				continue
+			value = value.strip()
+			if not value:
+				raise GraphQLError(f"The {key.replace('_', ' ')} field can't be empty")
+			setattr(user, key, value)
+
+		if kwargs.get('phone') and User.objects.filter(phone=user.phone).exclude(id=user.id).exists():
+			raise GraphQLError('This phone number is already used by another account')
+
+		user.save()
+		return UpdateUserProfile(message='Profile updated successfully', user=user)
 
 
 class ResetPassword(graphene.Mutation):
@@ -212,7 +224,8 @@ class SendConfirmationEmail(graphene.Mutation):
 
 class ConfigureUserSettings(graphene.Mutation):
 	"""
-	This mutation is used to configure user settings like notifications, alert thresholds, and default currency.
+	This mutation is used to configure user settings like notifications, alert thresholds,
+	default currency and appearance (theme mode and accent colors).
 	"""
 	message = graphene.String()
 
@@ -222,6 +235,9 @@ class ConfigureUserSettings(graphene.Mutation):
 		budget_alerts_enabled = graphene.Boolean(required=False)
 		budget_alert_threshold = graphene.Int(required=False)
 		default_currency = graphene.String(required=False)
+		theme_mode = graphene.String(required=False)
+		primary_color = graphene.String(required=False)
+		secondary_color = graphene.String(required=False)
 
 	@login_required
 	def mutate(self, info, **kwargs):
@@ -234,7 +250,18 @@ class ConfigureUserSettings(graphene.Mutation):
 				new_value = value
 				if key == 'default_currency':
 					new_value = get_model_object(Currency, 'id', value)
+				elif key in ('primary_color', 'secondary_color'):
+					new_value = value.lower()
 				setattr(user.settings, key, new_value)
+
+		# Only the appearance fields are validated here; the rest keep their existing behavior
+		try:
+			user.settings.clean_fields(exclude=[
+				field.name for field in UserSettings._meta.fields if field.name not in APPEARANCE_FIELDS
+			])
+		except ValidationError as error:
+			messages = [f"{field}: {' '.join(errors)}" for field, errors in error.message_dict.items()]
+			raise GraphQLError('; '.join(messages))
 
 		user.settings.save()
 		return ConfigureUserSettings(message='Settings updated successfully')

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -57,6 +58,7 @@ INSTALLED_APPS = [
 	'apps.behavior_ip',
 	'dbbackup',  # django-dbbackup
 	'graphene_django',
+	'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
 	'django_crontab'  # For automatic job
 ]
 
@@ -132,9 +134,9 @@ AUTH_PASSWORD_VALIDATORS = [
 GRAPHENE = {
 	'SCHEMA': 'd2dstore.schema.schema',
 	"SCHEMA_INDENT": 2,
-	"MIDDLEWARE": (
-		"graphql_jwt.middleware.JSONWebTokenMiddleware",
-		"graphene_django.debug.DjangoDebugMiddleware"
+	# The debug middleware returns raw SQL and exception details, so it only runs in development
+	"MIDDLEWARE": ("graphql_jwt.middleware.JSONWebTokenMiddleware",) + (
+		("graphene_django.debug.DjangoDebugMiddleware",) if DEBUG else ()
 	),
 }
 REST_FRAMEWORK = {
@@ -148,10 +150,22 @@ REST_FRAMEWORK = {
 	],
 	'DEFAULT_PARSER_CLASSES': (
 		'rest_framework.parsers.JSONParser',
-	)
+	),
+	# DRF falls back to AllowAny when this is not set
+	'DEFAULT_PERMISSION_CLASSES': [
+		'rest_framework.permissions.IsAuthenticated',
+	],
 }
 GRAPHQL_JWT = {
-	'JWT_ALLOW_ANY_HANDLER': 'app_utils.helpers.jwt_allow_allow_any'
+	'JWT_ALLOW_ANY_HANDLER': 'app_utils.helpers.jwt_allow_allow_any',
+	'JWT_VERIFY_EXPIRATION': True,
+	'JWT_EXPIRATION_DELTA': timedelta(minutes=15),
+	'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
+	'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
+	# Refresh token lives only in an HttpOnly cookie, never in the response body
+	'JWT_REFRESH_TOKEN_COOKIE_NAME': 'refresh-token',
+	'JWT_COOKIE_SECURE': bool(os.getenv('JWT_C_SECURE', '') == 'true'),
+	'JWT_COOKIE_SAMESITE': os.getenv('JWT_C_SAMESITE', 'Lax'),
 }
 AUTHENTICATION_BACKENDS = [
 	'graphql_jwt.backends.JSONWebTokenBackend',
@@ -163,6 +177,7 @@ CORS_ORIGIN_WHITELIST = (
 	'http://localhost:3000',
 	'http://192.168.1.110:8080'
 )
+CORS_ALLOW_CREDENTIALS = True
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 

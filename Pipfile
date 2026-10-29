@@ -6,6 +6,12 @@ verify_ssl = true
 [dev-packages]
 pylint = "==3.3.2"
 
+[scripts]
+start = "python manage.py runserver"
+migrate = "python manage.py migrate"
+collectstatic = "python manage.py collectstatic --noinput"
+createsuperuser = "python manage.py createsuperuser"
+
 [packages]
 django = "==4.2.17"
 graphene-django = "==3.1.2"
@@ -16,7 +22,8 @@ graphene = "==3.2.2"
 djangorestframework = "==3.15.2"
 django-cors-headers = "==3.4.0"
 coreapi = "==2.3.3"
-psycopg2 = "==2.8.6"
+setuptools = "<81"
+psycopg2 = "==2.9.10"
 gunicorn = "==23.0.0"
 django-dbbackup = "==4.2.1"
 dropbox = "==10.9.0"
@@ -26,6 +33,7 @@ pyjwt = "==2.7.0"
 geoip2 = "==4.3.0"
 django-crontab = "==0.7.1"
 django-upgrade = "==1.22.2"
+rich = "==15.0.0"
 
 [requires]
-python_version = "3.10"
+python_version = "3.12"

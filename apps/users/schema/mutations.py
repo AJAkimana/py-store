@@ -3,14 +3,19 @@ from django.contrib.auth import authenticate, logout
 from graphql_jwt.decorators import login_required, superuser_required
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import update_last_login
+from django.core.exceptions import ValidationError
 from graphql import GraphQLError
 # from graphql_jwt.utils import jwt_payload, jwt_encode
-from graphql_jwt.shortcuts import get_token
+from graphql_jwt.shortcuts import get_token, create_refresh_token, get_refresh_token
+from graphql_jwt.exceptions import JSONWebTokenError
+from graphql_jwt.settings import jwt_settings
 from app_utils.database import get_model_object
 from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
-from apps.users.models import User
+from apps.users.models import User, UserSettings, Currency
 from app_utils.model_types.user import UserType
+
+APPEARANCE_FIELDS = ('theme_mode', 'primary_color', 'secondary_color')
 
 
 class RegisterUser(graphene.Mutation):
@@ -60,14 +65,16 @@ class LoginUser(graphene.Mutation):
 Login a users with their credentials
 
 args:
-password(str): users's registered password
-email(str): users's registered email
+password(str): user's registered password
+email(str): user's registered email
 
 returns:
 message(str): success messsage confirming login
 token(str): JWT authorization token used to validate the login
 rest_token(str): JWT token used to validate REST endpoint access
 user(obj): 'User' object containing details of the logged in users
+
+The refresh token is set as an HttpOnly cookie, never returned in the body.
 """
 	message = graphene.String()
 	token = graphene.String()
@@ -79,7 +86,6 @@ user(obj): 'User' object containing details of the logged in users
 		password = graphene.String()
 
 	def mutate(self, info, email, password, **kwargs):
-		print(f'Login attempt with email: {email} and password: {password}')
 		user_auth = authenticate(email=email, password=password)
 
 		if user_auth is None:
@@ -90,6 +96,7 @@ user(obj): 'User' object containing details of the logged in users
 		update_last_login(sender=User, user=user_auth)
 		# user_payload = jwt_payload(user_auth)
 		token = get_token(user_auth)
+		info.context.jwt_refresh_token = create_refresh_token(user_auth)
 		rest_payload = Token.objects.get_or_create(user=user_auth)
 		rest_token = rest_payload[0]
 
@@ -97,9 +104,41 @@ user(obj): 'User' object containing details of the logged in users
 										 rest_token=rest_token, user=user_auth)
 
 
+class RefreshToken(graphene.Mutation):
+	"""
+Issue a new JWT using the refresh token cookie.
+The refresh token is rotated: the old one is revoked and a new cookie is set.
+"""
+	token = graphene.String()
+
+	def mutate(self, info, **kwargs):
+		context = info.context
+		cookie_token = context.COOKIES.get(jwt_settings.JWT_REFRESH_TOKEN_COOKIE_NAME)
+		if not cookie_token:
+			raise GraphQLError('Refresh token is required')
+
+		try:
+			old_refresh_token = get_refresh_token(cookie_token, context)
+		except JSONWebTokenError:
+			context.delete_refresh_token_cookie = True
+			raise GraphQLError('Invalid refresh token')
+
+		if old_refresh_token.is_expired(context):
+			old_refresh_token.revoke(context)
+			context.delete_refresh_token_cookie = True
+			raise GraphQLError('Refresh token is expired')
+
+		user = old_refresh_token.user
+		old_refresh_token.revoke(context)
+		context.jwt_refresh_token = create_refresh_token(user)
+
+		return RefreshToken(token=get_token(user))
+
+
 class UpdateUserProfile(graphene.Mutation):
 	"""
-	This is a mutation used to create new users
+	Update the logged-in user's own profile. Only the fields sent are changed.
+	Passwords are changed through 'ResetPassword', which checks the old one.
 	"""
 	user = graphene.Field(UserType)
 	message = graphene.String()
@@ -108,16 +147,24 @@ class UpdateUserProfile(graphene.Mutation):
 		first_name = graphene.String()
 		last_name = graphene.String()
 		phone = graphene.String()
-		password = graphene.String()
-		only_password = graphene.Boolean()
 
 	@login_required
 	def mutate(self, info, **kwargs):
-		user = info.context
-		validator = ValidateUser(**kwargs)
-		new_user = validator.validate_and_save_user(user)
+		user = info.context.user
 
-		return UpdateUserProfile(message='Success', user=new_user)
+		for key, value in kwargs.items():
+			if value is None:
+				continue
+			value = value.strip()
+			if not value:
+				raise GraphQLError(f"The {key.replace('_', ' ')} field can't be empty")
+			setattr(user, key, value)
+
+		if kwargs.get('phone') and User.objects.filter(phone=user.phone).exclude(id=user.id).exists():
+			raise GraphQLError('This phone number is already used by another account')
+
+		user.save()
+		return UpdateUserProfile(message='Profile updated successfully', user=user)
 
 
 class ResetPassword(graphene.Mutation):
@@ -153,7 +200,15 @@ class LogoutUser(graphene.Mutation):
 	message = graphene.String()
 
 	def mutate(self, info, **kwargs):
-		Token.objects.filter(user=info.context.user).delete()
+		cookie_token = info.context.COOKIES.get(jwt_settings.JWT_REFRESH_TOKEN_COOKIE_NAME)
+		if cookie_token:
+			try:
+				get_refresh_token(cookie_token, info.context).revoke(info.context)
+			except JSONWebTokenError:
+				pass  # Already revoked or unknown, nothing to invalidate
+		info.context.delete_refresh_token_cookie = True
+		if not info.context.user.is_anonymous:
+			Token.objects.filter(user=info.context.user).delete()
 
 		return LogoutUser(message='Success')
 
@@ -167,6 +222,51 @@ class SendConfirmationEmail(graphene.Mutation):
 		return SendConfirmationEmail(message=sent['message'], has_error=sent['has_error'])
 
 
+class ConfigureUserSettings(graphene.Mutation):
+	"""
+	This mutation is used to configure user settings like notifications, alert thresholds,
+	default currency and appearance (theme mode and accent colors).
+	"""
+	message = graphene.String()
+
+	class Arguments:
+		email_notifications = graphene.Boolean(required=False)
+		push_notifications = graphene.Boolean(required=False)
+		budget_alerts_enabled = graphene.Boolean(required=False)
+		budget_alert_threshold = graphene.Int(required=False)
+		default_currency = graphene.String(required=False)
+		theme_mode = graphene.String(required=False)
+		primary_color = graphene.String(required=False)
+		secondary_color = graphene.String(required=False)
+
+	@login_required
+	def mutate(self, info, **kwargs):
+		user = info.context.user
+
+		if not hasattr(user, 'settings'):
+			user.settings = UserSettings(user=user)
+		for key, value in kwargs.items():
+			if value is not None:
+				new_value = value
+				if key == 'default_currency':
+					new_value = get_model_object(Currency, 'id', value)
+				elif key in ('primary_color', 'secondary_color'):
+					new_value = value.lower()
+				setattr(user.settings, key, new_value)
+
+		# Only the appearance fields are validated here; the rest keep their existing behavior
+		try:
+			user.settings.clean_fields(exclude=[
+				field.name for field in UserSettings._meta.fields if field.name not in APPEARANCE_FIELDS
+			])
+		except ValidationError as error:
+			messages = [f"{field}: {' '.join(errors)}" for field, errors in error.message_dict.items()]
+			raise GraphQLError('; '.join(messages))
+
+		user.settings.save()
+		return ConfigureUserSettings(message='Settings updated successfully')
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
@@ -174,4 +274,6 @@ class UserMutations(graphene.ObjectType):
 	register_user = RegisterUser.Field()
 	update_registered_user = UpdateRegisteredUser.Field()
 	logout_user = LogoutUser.Field()
+	refresh_token = RefreshToken.Field()
 	send_confirmation_email = SendConfirmationEmail.Field()
+	configure_user_settings = ConfigureUserSettings.Field()

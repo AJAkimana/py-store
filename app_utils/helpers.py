@@ -148,8 +148,23 @@ def get_stores_filter(**filters):
 	n_days = filters.get('n_days', '')
 	search_date_from = filters.get('search_date_from', '')
 	search_date_to = filters.get('search_date_to', '')
+	transaction_type = filters.get('transaction_type', '')
+	budget_line_id = filters.get('budget_line_id', '')
 
 	search_filter = Q(record_type=search_type)
+
+	if transaction_type == 'income':
+		search_filter &= Q(is_inflow=True)
+	elif transaction_type == 'expense':
+		search_filter &= Q(is_inflow=False)
+	elif transaction_type == 'property':
+		search_filter &= Q(is_property=True)
+
+	if budget_line_id and is_valid_uuid(budget_line_id):
+		search_filter &= (
+			Q(budget_item__u_budget_line_id=budget_line_id) |
+			Q(budget_item__d_budget_line_id=budget_line_id)
+		)
 
 	if search_key != "":
 		search_filter &= (

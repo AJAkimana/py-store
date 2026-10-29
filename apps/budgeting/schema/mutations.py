@@ -2,12 +2,13 @@ import graphene
 from django.db.models import Q
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
+from graphql_jwt.exceptions import PermissionDenied
 
 from app_utils.database import get_model_object
 from app_utils.model_types.store import BudgetItemInputType, BudgetType, BudgetLineType
 from app_utils.validations.validate_budget import ValidateBudget
 from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine, UserDefaultBudgetLine
-from apps.households.models import Household
+from apps.household_members.helpers import get_user_household
 
 
 class CreateEditBudget(graphene.Mutation):
@@ -35,7 +36,7 @@ class CreateBudget(CreateEditBudget):
     def mutate(self, info, **kwargs):
         user = info.context.user
 
-        household = get_model_object(Household, 'id', kwargs['household_id'])
+        household = get_user_household(user, kwargs['household_id'])
         budget = Budget(user=user, household=household)
         validator = ValidateBudget(**kwargs)
 
@@ -57,7 +58,10 @@ class UpdateBudget(CreateEditBudget):
 
     @login_required
     def mutate(self, info, **kwargs):
-        budget = get_model_object(Budget, 'id', kwargs.get('id'))
+        user = info.context.user
+        budget = get_model_object(Budget, 'id', kwargs.get('id'), manager_query=user.budgets)
+        if kwargs.get('household_id'):
+            get_user_household(user, kwargs['household_id'])
         validator = ValidateBudget(**kwargs)
 
         if kwargs['status'] == 'approved' and len(budget.budget_items.all()) == 0:
@@ -77,7 +81,7 @@ class CreateBudgetItems(graphene.Mutation):
 
     @login_required
     def mutate(self, info, **kwargs):
-        budget = get_model_object(Budget, 'id', kwargs['budget_id'])
+        budget = get_model_object(Budget, 'id', kwargs['budget_id'], manager_query=info.context.user.budgets)
         saved = 0
         not_saved = 0
 
@@ -120,6 +124,8 @@ class CreateBudgetLine(graphene.Mutation):
     @login_required
     def mutate(self, info, is_system,  **kwargs):
         user = info.context.user
+        if is_system and not user.is_superuser:
+            raise PermissionDenied()
         name = kwargs.get('name', '')
         if not name.strip():
             raise GraphQLError("The 'name' field can't be empty")
@@ -172,8 +178,13 @@ class DeleteBudgetLine(graphene.Mutation):
 
     @login_required
     def mutate(self, info, id, is_system=False, **kwargs):
-        BudgetLine = DefaultBudgetLine if is_system else UserBudgetLine
-        budget_line = get_model_object(BudgetLine, 'id', id)
+        user = info.context.user
+        if is_system:
+            if not user.is_superuser:
+                raise PermissionDenied()
+            budget_line = get_model_object(DefaultBudgetLine, 'id', id)
+        else:
+            budget_line = get_model_object(UserBudgetLine, 'id', id, manager_query=user.user_budget_lines)
         if not budget_line:
             raise GraphQLError('Budget line not found')
         budget_filter = Q(d_budget_line__id=id) if is_system else Q(

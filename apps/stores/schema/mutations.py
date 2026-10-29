@@ -5,7 +5,7 @@ from graphql_jwt.decorators import login_required, superuser_required
 from app_utils.constants import STORE_CHOICES
 from app_utils.database import get_model_object
 from app_utils.validations.validate_store import ValidateStore
-from apps.households.models import Household
+from apps.household_members.helpers import get_user_household
 from apps.properties.models import PropDetail
 from apps.stores.models import Store, RecurringStore
 from app_utils.model_types.store import StoreInputType, StoreType
@@ -39,7 +39,7 @@ class CreateStore(CreateEditStore):
 	def mutate(self, info, **kwargs):
 		user = info.context.user
 
-		household = get_model_object(Household, 'id', kwargs['household_id'])
+		household = get_user_household(user, kwargs['household_id'])
 		store = Store(user=user, household=household)
 		validator = ValidateStore(**kwargs)
 
@@ -61,6 +61,7 @@ class UpdateStore(CreateEditStore):
 	def mutate(self, info, **kwargs):
 		user = info.context.user
 		store = get_model_object(Store, 'id', kwargs.get('id'), manager_query=user.stores)
+		get_user_household(user, kwargs['household_id'])
 		validator = ValidateStore(**kwargs)
 
 		updated_store = validator.validate_and_save_store(store)

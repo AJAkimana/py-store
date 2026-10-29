@@ -2,11 +2,10 @@ import graphene
 from graphql import GraphQLError
 from graphql_jwt.decorators import login_required
 
-from app_utils.database import get_model_object
 from app_utils.model_types.store import BehaviorType
 from app_utils.validations.validate_behavior import ValidateBehavior
 from apps.behavior_ip.models import Behavior
-from apps.households.models import Household
+from apps.household_members.helpers import get_user_household
 
 
 class CreateEditBehavior(graphene.Mutation):
@@ -32,7 +31,7 @@ class EvaluateBehavior(CreateEditBehavior):
 	def mutate(self, info, **kwargs):
 		user = info.context.user
 
-		household = get_model_object(Household, 'id', kwargs['household_id'])
+		household = get_user_household(user, kwargs['household_id'])
 		behavior = Behavior(user=user, household=household)
 		validator = ValidateBehavior(**kwargs)
 

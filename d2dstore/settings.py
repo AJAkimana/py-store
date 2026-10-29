@@ -134,9 +134,9 @@ AUTH_PASSWORD_VALIDATORS = [
 GRAPHENE = {
 	'SCHEMA': 'd2dstore.schema.schema',
 	"SCHEMA_INDENT": 2,
-	"MIDDLEWARE": (
-		"graphql_jwt.middleware.JSONWebTokenMiddleware",
-		"graphene_django.debug.DjangoDebugMiddleware"
+	# The debug middleware returns raw SQL and exception details, so it only runs in development
+	"MIDDLEWARE": ("graphql_jwt.middleware.JSONWebTokenMiddleware",) + (
+		("graphene_django.debug.DjangoDebugMiddleware",) if DEBUG else ()
 	),
 }
 REST_FRAMEWORK = {
@@ -150,7 +150,11 @@ REST_FRAMEWORK = {
 	],
 	'DEFAULT_PARSER_CLASSES': (
 		'rest_framework.parsers.JSONParser',
-	)
+	),
+	# DRF falls back to AllowAny when this is not set
+	'DEFAULT_PERMISSION_CLASSES': [
+		'rest_framework.permissions.IsAuthenticated',
+	],
 }
 GRAPHQL_JWT = {
 	'JWT_ALLOW_ANY_HANDLER': 'app_utils.helpers.jwt_allow_allow_any',

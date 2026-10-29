@@ -1,5 +1,6 @@
 import graphene
 import graphql_jwt
+from django.conf import settings
 from graphene_django.debug import DjangoDebug
 
 from apps.behavior_ip.schema.mutations import BehaviorMutations
@@ -28,7 +29,9 @@ class AppQuery(
 	BehaviorQuery,
 	graphene.ObjectType
 ):
-	debug = graphene.Field(DjangoDebug, name="_debug")
+	# Exposes raw SQL, so only available in development
+	if settings.DEBUG:
+		debug = graphene.Field(DjangoDebug, name="_debug")
 
 
 class AppMutations(

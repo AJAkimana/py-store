@@ -25,6 +25,8 @@ class PaginatorUserType(graphene.ObjectType):
 class UserSettingsType(DjangoObjectType):
 	class Meta:
 		model = UserSettings
+		# Expose theme_mode as a plain 'light' | 'dark' string instead of a generated enum
+		convert_choices_to_enum = False
 
 	email_notifications_help_text = graphene.String()
 	push_notifications_help_text = graphene.String()

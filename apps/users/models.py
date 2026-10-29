@@ -1,7 +1,7 @@
 import uuid
 from typing import Dict, Any
 
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser
@@ -108,12 +108,23 @@ class Currency(BaseModel):
 		return f"{self.code} - {self.name}"
 
 
+DEFAULT_PRIMARY_COLOR = '#1976d2'
+DEFAULT_SECONDARY_COLOR = '#0288d1'
+hex_color_validator = RegexValidator(r'^#[0-9a-fA-F]{6}$', 'Enter a color as #rrggbb.')
+
+
+class ThemeMode(models.TextChoices):
+	LIGHT = 'light', 'Light'
+	DARK = 'dark', 'Dark'
+
+
 class UserSettings(BaseModel):
 	"""
 	Per-user settings reflected in the screenshot:
 	- Notification toggles: email, push
 	- Budget alerts toggle + threshold (when approaching budget limits)
 	- Default currency selector
+	- Appearance: theme mode and accent colors
 	"""
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="settings")
 
@@ -146,6 +157,26 @@ class UserSettings(BaseModel):
 		null=True,
 		blank=True,
 		help_text="User's default currency for amounts and budgets.",
+	)
+
+	# Appearance
+	theme_mode = models.CharField(
+		max_length=10,
+		choices=ThemeMode.choices,
+		default=ThemeMode.LIGHT,
+		help_text="Light or dark interface.",
+	)
+	primary_color = models.CharField(
+		max_length=7,
+		default=DEFAULT_PRIMARY_COLOR,
+		validators=[hex_color_validator],
+		help_text="Main accent color as a #rrggbb hex value.",
+	)
+	secondary_color = models.CharField(
+		max_length=7,
+		default=DEFAULT_SECONDARY_COLOR,
+		validators=[hex_color_validator],
+		help_text="Supporting accent color as a #rrggbb hex value.",
 	)
 
 	class Meta:

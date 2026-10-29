@@ -1,5 +1,5 @@
 {
-	"python.pythonPath": "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3.10",
+	"python.defaultInterpreterPath": "~/.local/share/virtualenvs/api-mv3wZfgb/bin/python",
 	"files.eol": "\n",
 	"files.insertFinalNewline": true,
 	"files.encoding": "utf8",

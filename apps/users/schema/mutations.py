@@ -2,7 +2,6 @@ import graphene
 from django.contrib.auth import authenticate, logout
 from graphql_jwt.decorators import login_required, superuser_required
 from rest_framework.authtoken.models import Token
-from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ValidationError
 from graphql import GraphQLError
 # from graphql_jwt.utils import jwt_payload, jwt_encode
@@ -13,6 +12,7 @@ from app_utils.database import get_model_object
 from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
 from apps.users.models import User, UserSettings, Currency
+from apps.users.session import issue_session
 from app_utils.model_types.user import UserType
 
 APPEARANCE_FIELDS = ('theme_mode', 'primary_color', 'secondary_color')
@@ -93,12 +93,7 @@ The refresh token is set as an HttpOnly cookie, never returned in the body.
 
 		if not user_auth.is_verified:
 			raise GraphQLError('Create a new password first')
-		update_last_login(sender=User, user=user_auth)
-		# user_payload = jwt_payload(user_auth)
-		token = get_token(user_auth)
-		info.context.jwt_refresh_token = create_refresh_token(user_auth)
-		rest_payload = Token.objects.get_or_create(user=user_auth)
-		rest_token = rest_payload[0]
+		token, rest_token = issue_session(info, user_auth)
 
 		return LoginUser(message='Success', token=token,
 										 rest_token=rest_token, user=user_auth)

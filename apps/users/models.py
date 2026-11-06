@@ -185,3 +185,110 @@ class UserSettings(BaseModel):
 
 	def __str__(self) -> str:
 		return f"Settings for {self.user}"
+
+
+class MfaMethod(models.TextChoices):
+	TOTP = 'totp', 'Authenticator app'
+	EMAIL = 'email', 'Email code'
+	RECOVERY = 'recovery', 'Recovery code'
+
+
+class UserMfa(BaseModel):
+	"""
+	Two-factor authentication state for a user. Kept off the 'User' model so the
+	secret can never leak through 'UserType'. Never expose this model over GraphQL.
+
+	Don't soft-delete it: the row would still hold the one-to-one slot (and the secret).
+	Turning 2FA off resets the fields instead.
+	"""
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mfa')
+
+	# Authenticator app (TOTP). The secret is Fernet-encrypted; it is set during setup
+	# and only counts as enabled once a code has been confirmed.
+	totp_secret_encrypted = models.TextField(blank=True, default='')
+	totp_confirmed_at = models.DateTimeField(null=True, blank=True)
+	# Last accepted TOTP time step, so a code can't be replayed inside its window
+	totp_last_used_step = models.BigIntegerField(null=True, blank=True)
+
+	email_otp_enabled = models.BooleanField(default=False)
+	preferred_method = models.CharField(
+		max_length=10,
+		choices=[(MfaMethod.TOTP.value, MfaMethod.TOTP.label), (MfaMethod.EMAIL.value, MfaMethod.EMAIL.label)],
+		blank=True,
+		default='',
+	)
+
+	class Meta:
+		db_table = 'user_mfa'
+		verbose_name = 'User two-factor settings'
+		verbose_name_plural = 'User two-factor settings'
+
+	def __str__(self) -> str:
+		return f'2FA for {self.user}'
+
+	@property
+	def totp_enabled(self) -> bool:
+		return bool(self.totp_secret_encrypted and self.totp_confirmed_at)
+
+	@property
+	def enabled_methods(self) -> list:
+		methods = []
+		if self.totp_enabled:
+			methods.append(MfaMethod.TOTP.value)
+		if self.email_otp_enabled:
+			methods.append(MfaMethod.EMAIL.value)
+		return methods
+
+	@property
+	def is_enabled(self) -> bool:
+		return bool(self.enabled_methods)
+
+	@property
+	def default_method(self) -> str:
+		methods = self.enabled_methods
+		if self.preferred_method in methods:
+			return self.preferred_method
+		return methods[0] if methods else ''
+
+
+class MfaChallengePurpose(models.TextChoices):
+	LOGIN = 'login', 'Login'
+	SETUP_EMAIL = 'setup_email', 'Email setup'
+
+
+class MfaChallenge(BaseModel):
+	"""
+	A pending second-factor check (a login waiting for its code, or an email setup).
+	Email codes are stored as an HMAC, never in plain text. Rows are hard-deleted.
+	"""
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mfa_challenges')
+	purpose = models.CharField(max_length=20, choices=MfaChallengePurpose.choices)
+	code_hash = models.CharField(max_length=128, blank=True, default='')
+	expires_at = models.DateTimeField()
+	attempts = models.PositiveSmallIntegerField(default=0)
+	send_count = models.PositiveSmallIntegerField(default=0)
+	last_sent_at = models.DateTimeField(null=True, blank=True)
+	consumed_at = models.DateTimeField(null=True, blank=True)
+
+	class Meta:
+		db_table = 'user_mfa_challenges'
+		indexes = [models.Index(fields=['expires_at'])]
+
+	def __str__(self) -> str:
+		return f'{self.get_purpose_display()} challenge for {self.user}'
+
+
+class MfaRecoveryCode(BaseModel):
+	"""Single-use backup code; only its HMAC is stored. Rows are hard-deleted."""
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mfa_recovery_codes')
+	code_hash = models.CharField(max_length=128)
+	used_at = models.DateTimeField(null=True, blank=True)
+
+	class Meta:
+		db_table = 'user_mfa_recovery_codes'
+		constraints = [
+			models.UniqueConstraint(fields=['user', 'code_hash'], name='unique_user_recovery_code'),
+		]
+
+	def __str__(self) -> str:
+		return f'Recovery code for {self.user}'

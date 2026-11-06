@@ -167,6 +167,13 @@ GRAPHQL_JWT = {
 	'JWT_COOKIE_SECURE': bool(os.getenv('JWT_C_SECURE', '') == 'true'),
 	'JWT_COOKIE_SAMESITE': os.getenv('JWT_C_SAMESITE', 'Lax'),
 }
+# Two-factor authentication
+# Fernet key used to encrypt TOTP secrets at rest. Generate one with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Required when DEBUG is off; in development a key is derived from SECRET_KEY.
+MFA_ENCRYPTION_KEY = os.getenv('MFA_ENCRYPTION_KEY', '')
+MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', 'D2DStore')
+
 AUTHENTICATION_BACKENDS = [
 	'graphql_jwt.backends.JSONWebTokenBackend',
 	'django.contrib.auth.backends.ModelBackend',

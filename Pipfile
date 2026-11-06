@@ -34,6 +34,9 @@ geoip2 = "==4.3.0"
 django-crontab = "==0.7.1"
 django-upgrade = "==1.22.2"
 rich = "==15.0.0"
+pyotp = "==2.9.0"
+cryptography = "==44.0.0"
+segno = "==1.6.1"
 
 [requires]
 python_version = "3.12"

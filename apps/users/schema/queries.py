@@ -3,8 +3,9 @@ from graphql_jwt.decorators import login_required,\
 	superuser_required
 from django.db.models import Q
 from app_utils.model_types.user import UserType, \
-	PaginatorUserType, WelcomeType, UserSettingsType, CurrencyType
+	PaginatorUserType, WelcomeType, UserSettingsType, CurrencyType, MfaStatusType
 from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
+from apps.users.mfa import get_mfa_status
 from apps.users.models import User, Currency, UserSettings, ThemeMode, \
 	DEFAULT_PRIMARY_COLOR, DEFAULT_SECONDARY_COLOR
 
@@ -19,6 +20,11 @@ class UserQuery(graphene.ObjectType):
 		page_number=graphene.Int())
 	user_settings = graphene.Field(UserSettingsType)
 	currencies = graphene.List(CurrencyType)
+	mfa_status = graphene.Field(MfaStatusType, required=True)
+
+	@login_required
+	def resolve_mfa_status(self, info, **kwargs):
+		return MfaStatusType(**get_mfa_status(info.context.user))
 
 	@login_required
 	def resolve_me(self, info, **kwargs):

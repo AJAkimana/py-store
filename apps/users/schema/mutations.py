@@ -13,7 +13,8 @@ from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
 from apps.users.models import User, UserSettings, Currency
 from apps.users.session import issue_session
-from app_utils.model_types.user import UserType
+from app_utils.model_types.user import UserType, MfaStatusType, TotpSetupType
+from apps.users import mfa
 
 APPEARANCE_FIELDS = ('theme_mode', 'primary_color', 'secondary_color')
 
@@ -262,6 +263,55 @@ class ConfigureUserSettings(graphene.Mutation):
 		return ConfigureUserSettings(message='Settings updated successfully')
 
 
+class StartTotpSetup(graphene.Mutation):
+	"""
+	Begin adding an authenticator app. Asks for the password again so a stolen
+	session can't attach the attacker's app and lock the owner out.
+	The returned secret only works after 'confirmTotpSetup'.
+	"""
+	setup = graphene.Field(TotpSetupType)
+
+	class Arguments:
+		password = graphene.String(required=True)
+
+	@login_required
+	def mutate(self, info, password):
+		user = info.context.user
+		if not user.check_password(password):
+			raise GraphQLError('Incorrect password')
+		try:
+			setup = mfa.start_totp_setup(user)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return StartTotpSetup(setup=TotpSetupType(**setup))
+
+
+class ConfirmTotpSetup(graphene.Mutation):
+	"""
+	Turn the authenticator app on with a code from it. 'recoveryCodes' is filled only
+	when this is the account's first 2FA method; show the codes once, they aren't stored.
+	"""
+	message = graphene.String()
+	recovery_codes = graphene.List(graphene.NonNull(graphene.String), required=True)
+	status = graphene.Field(MfaStatusType)
+
+	class Arguments:
+		code = graphene.String(required=True)
+
+	@login_required
+	def mutate(self, info, code):
+		user = info.context.user
+		try:
+			recovery_codes = mfa.confirm_totp_setup(user, code)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return ConfirmTotpSetup(
+			message='Authenticator app turned on',
+			recovery_codes=recovery_codes,
+			status=MfaStatusType(**mfa.get_mfa_status(user)),
+		)
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	reset_password = ResetPassword.Field()
@@ -272,3 +322,5 @@ class UserMutations(graphene.ObjectType):
 	refresh_token = RefreshToken.Field()
 	send_confirmation_email = SendConfirmationEmail.Field()
 	configure_user_settings = ConfigureUserSettings.Field()
+	start_totp_setup = StartTotpSetup.Field()
+	confirm_totp_setup = ConfirmTotpSetup.Field()

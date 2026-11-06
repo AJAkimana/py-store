@@ -99,6 +99,20 @@ def is_mfa_enabled(user: User) -> bool:
 	return bool(mfa and mfa.is_enabled)
 
 
+def get_mfa_status(user: User) -> dict:
+	"""Public 2FA status for the settings page. Never includes secrets."""
+	mfa = get_user_mfa(user)
+	methods = mfa.enabled_methods if mfa else []
+	return {
+		'enabled': bool(methods),
+		'totp_enabled': MfaMethod.TOTP.value in methods,
+		'email_enabled': MfaMethod.EMAIL.value in methods,
+		'methods': methods,
+		'preferred_method': mfa.default_method if mfa and methods else None,
+		'recovery_codes_remaining': recovery_codes_remaining(user) if methods else 0,
+	}
+
+
 def _get_or_create_mfa(user: User) -> UserMfa:
 	mfa, _ = UserMfa.objects.get_or_create(user=user)
 	return mfa

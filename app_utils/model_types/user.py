@@ -49,3 +49,20 @@ class UserSettingsType(DjangoObjectType):
 class CurrencyType(DjangoObjectType):
 		class Meta:
 			model = Currency
+
+
+class MfaStatusType(graphene.ObjectType):
+	"""The user's two-factor status. Never carries secrets."""
+	enabled = graphene.Boolean(required=True)
+	totp_enabled = graphene.Boolean(required=True)
+	email_enabled = graphene.Boolean(required=True)
+	methods = graphene.List(graphene.NonNull(graphene.String), required=True)
+	preferred_method = graphene.String()
+	recovery_codes_remaining = graphene.Int(required=True)
+
+
+class TotpSetupType(graphene.ObjectType):
+	"""Shown once while adding an authenticator app."""
+	secret = graphene.String(required=True)
+	otpauth_uri = graphene.String(required=True)
+	qr_svg = graphene.String(required=True, description='QR code as an SVG data URI')

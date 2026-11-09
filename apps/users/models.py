@@ -258,6 +258,8 @@ class UserMfa(BaseModel):
 class MfaChallengePurpose(models.TextChoices):
 	LOGIN = 'login', 'Login'
 	SETUP_EMAIL = 'setup_email', 'Email setup'
+	# Re-checking the second factor before turning 2FA off or replacing recovery codes
+	SENSITIVE = 'sensitive', 'Sensitive action'
 
 
 class MfaChallenge(BaseModel):

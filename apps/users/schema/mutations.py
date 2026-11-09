@@ -76,11 +76,18 @@ rest_token(str): JWT token used to validate REST endpoint access
 user(obj): 'User' object containing details of the logged in users
 
 The refresh token is set as an HttpOnly cookie, never returned in the body.
+
+When two-factor authentication is on, no session is issued: the response has
+mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
 """
 	message = graphene.String()
 	token = graphene.String()
 	rest_token = graphene.String()
 	user = graphene.Field(UserType)
+	mfa_required = graphene.Boolean(required=True)
+	mfa_token = graphene.String()
+	mfa_methods = graphene.List(graphene.NonNull(graphene.String))
+	mfa_default_method = graphene.String()
 
 	class Arguments:
 		email = graphene.String()
@@ -94,10 +101,51 @@ The refresh token is set as an HttpOnly cookie, never returned in the body.
 
 		if not user_auth.is_verified:
 			raise GraphQLError('Create a new password first')
-		token, rest_token = issue_session(info, user_auth)
 
-		return LoginUser(message='Success', token=token,
-										 rest_token=rest_token, user=user_auth)
+		if mfa.is_mfa_enabled(user_auth):
+			try:
+				challenge = mfa.start_login_challenge(user_auth)
+			except mfa.MfaError as error:
+				raise GraphQLError(str(error))
+			# No user details until the second factor passes
+			return LoginUser(
+				message='Enter your verification code',
+				mfa_required=True,
+				mfa_token=challenge['mfa_token'],
+				mfa_methods=challenge['methods'],
+				mfa_default_method=challenge['default_method'],
+			)
+
+		token, rest_token = issue_session(info, user_auth)
+		return LoginUser(message='Success', token=token, rest_token=rest_token,
+										 user=user_auth, mfa_required=False)
+
+
+class VerifyMfaLogin(graphene.Mutation):
+	"""
+	Second login step. 'method' is 'totp', 'email' or 'recovery'.
+	On success it issues the session exactly like 'loginUser'.
+	"""
+	message = graphene.String()
+	token = graphene.String()
+	rest_token = graphene.String()
+	user = graphene.Field(UserType)
+
+	class Arguments:
+		mfa_token = graphene.String(required=True)
+		method = graphene.String(required=True)
+		code = graphene.String(required=True)
+
+	def mutate(self, info, mfa_token, method, code):
+		try:
+			user = mfa.verify_login(mfa_token, method, code)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		if not user.is_active:
+			raise GraphQLError('Invalid credentials')
+
+		token, rest_token = issue_session(info, user)
+		return VerifyMfaLogin(message='Success', token=token, rest_token=rest_token, user=user)
 
 
 class RefreshToken(graphene.Mutation):
@@ -314,6 +362,7 @@ class ConfirmTotpSetup(graphene.Mutation):
 
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
+	verify_mfa_login = VerifyMfaLogin.Field()
 	reset_password = ResetPassword.Field()
 	update_user_profile = UpdateUserProfile.Field()
 	register_user = RegisterUser.Field()

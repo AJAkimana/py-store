@@ -31,6 +31,9 @@ MAX_ATTEMPTS = 5
 MAX_EMAIL_SENDS = 5
 RESEND_INTERVAL = timedelta(seconds=60)
 RECOVERY_CODE_COUNT = 10
+# Per-user limit across login challenges, so logging in again doesn't give fresh guesses
+MAX_FAILED_LOGIN_CODES = 10
+LOGIN_LOCK_DURATION = timedelta(minutes=15)
 TOTP_VALID_WINDOW = 1  # accept the previous and next 30 s step for clock drift
 
 _SIGNER_SALT = 'apps.users.mfa.challenge'
@@ -346,12 +349,33 @@ def verify_challenge(challenge: MfaChallenge, method: str, code: str) -> User:
 		ok = False
 
 	if not ok:
+		if challenge.purpose == MfaChallengePurpose.LOGIN and mfa:
+			_record_failed_login_code(mfa)
 		# Return instead of raising so the transaction commits the counted attempt
 		return None
 
 	challenge.consumed_at = timezone.now()
 	challenge.save(update_fields=['consumed_at'])
+	if challenge.purpose == MfaChallengePurpose.LOGIN and mfa and mfa.failed_attempts:
+		UserMfa.objects.filter(pk=mfa.pk).update(failed_attempts=0, locked_until=None)
 	return user
+
+
+def _record_failed_login_code(mfa: UserMfa):
+	mfa = UserMfa.objects.select_for_update().get(pk=mfa.pk)
+	mfa.failed_attempts += 1
+	if mfa.failed_attempts >= MAX_FAILED_LOGIN_CODES:
+		mfa.failed_attempts = 0
+		mfa.locked_until = timezone.now() + LOGIN_LOCK_DURATION
+		# Drop the open challenge so the lock applies right away
+		MfaChallenge.all_objects.filter(user_id=mfa.user_id, purpose=MfaChallengePurpose.LOGIN).hard_delete()
+	_save_mfa(mfa, ['failed_attempts', 'locked_until'])
+
+
+def _ensure_not_locked(mfa: UserMfa):
+	if mfa.locked_until and mfa.locked_until > timezone.now():
+		minutes = int((mfa.locked_until - timezone.now()).total_seconds() // 60) + 1
+		raise MfaError(f'Too many incorrect codes. Try again in {minutes} minutes.')
 
 
 def verify_challenge_or_raise(challenge: MfaChallenge, method: str, code: str) -> User:
@@ -373,6 +397,7 @@ def start_login_challenge(user: User) -> dict:
 	mfa = get_user_mfa(user)
 	if not mfa or not mfa.is_enabled:
 		raise MfaError('Two-factor authentication is not enabled for this account')
+	_ensure_not_locked(mfa)
 
 	challenge = create_challenge(user, MfaChallengePurpose.LOGIN)
 	if mfa.default_method == MfaMethod.EMAIL:
@@ -395,6 +420,9 @@ def resend_login_email_code(mfa_token: str):
 def verify_login(mfa_token: str, method: str, code: str) -> User:
 	"""Second login step. Returns the user to issue a session for."""
 	challenge = load_challenge(mfa_token, MfaChallengePurpose.LOGIN)
+	mfa = get_user_mfa(challenge.user)
+	if mfa:
+		_ensure_not_locked(mfa)
 	return verify_challenge_or_raise(challenge, method, code)
 
 
@@ -443,7 +471,8 @@ def disable_mfa(user: User):
 	"""
 	UserMfa.objects.filter(user=user).update(
 		totp_secret_encrypted='', totp_confirmed_at=None, totp_last_used_step=None,
-		email_otp_enabled=False, preferred_method='', updated_at=timezone.now(),
+		email_otp_enabled=False, preferred_method='', failed_attempts=0, locked_until=None,
+		updated_at=timezone.now(),
 	)
 	MfaRecoveryCode.all_objects.filter(user=user).hard_delete()
 	MfaChallenge.all_objects.filter(user=user).hard_delete()

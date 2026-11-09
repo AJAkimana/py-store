@@ -142,3 +142,7 @@ django_static/
 __app_backups/
 
 .DS_Store
+
+# Local Postgres log and rendered email previews
+logfile
+akimanaja.html

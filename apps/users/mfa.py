@@ -21,6 +21,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from app_utils.emailing.auth_email import send_mfa_code_email
+from d2dstore.logger import logger
 from apps.users.models import (
 	User, UserMfa, MfaMethod, MfaChallenge, MfaChallengePurpose, MfaRecoveryCode,
 )
@@ -306,8 +307,15 @@ def send_email_code(challenge: MfaChallenge):
 		'code_hash', 'last_sent_at', 'send_count', 'expires_at', 'attempts', 'updated_at',
 	])
 
+	if settings.DEBUG:
+		# Development only, so the flow works without SMTP. Never runs with DEBUG off
+		logger.info(f'[MFA] Email code for {challenge.user.email}: {code}')
+
 	sent = send_mfa_code_email(challenge.user, code, int(CHALLENGE_TTL.total_seconds() // 60))
 	if sent['has_error']:
+		if settings.DEBUG:
+			logger.warning(f'[MFA] Email not sent ({sent["message"]}); use the code logged above')
+			return
 		raise MfaError('We could not send the verification email. Try again or use another method.')
 
 
@@ -410,10 +418,12 @@ def start_login_challenge(user: User) -> dict:
 
 
 def resend_login_email_code(mfa_token: str):
+	"""Send (or resend) the login code by email; also used when switching to email."""
 	challenge = load_challenge(mfa_token, MfaChallengePurpose.LOGIN)
 	mfa = get_user_mfa(challenge.user)
 	if not mfa or not mfa.email_otp_enabled:
 		raise MfaError('Email codes are not enabled for this account')
+	_ensure_not_locked(mfa)
 	send_email_code(challenge)
 
 

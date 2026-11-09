@@ -360,6 +360,99 @@ class ConfirmTotpSetup(graphene.Mutation):
 		)
 
 
+class StartEmailOtpSetup(graphene.Mutation):
+	"""
+	Email a code to the account's address. Send it back with the returned
+	'setupToken' to 'confirmEmailOtpSetup'. No password needed: only the mailbox
+	owner can read the code, so a stolen session can't turn this on by itself.
+	"""
+	message = graphene.String()
+	setup_token = graphene.String()
+
+	@login_required
+	def mutate(self, info):
+		try:
+			setup_token = mfa.start_email_setup(info.context.user)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return StartEmailOtpSetup(message='We sent a code to your email', setup_token=setup_token)
+
+
+class ResendEmailOtpSetupCode(graphene.Mutation):
+	message = graphene.String()
+
+	class Arguments:
+		setup_token = graphene.String(required=True)
+
+	@login_required
+	def mutate(self, info, setup_token):
+		try:
+			mfa.resend_email_setup_code(info.context.user, setup_token)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return ResendEmailOtpSetupCode(message='We sent a new code')
+
+
+class ConfirmEmailOtpSetup(graphene.Mutation):
+	"""Turn email codes on. 'recoveryCodes' is filled only for the account's first 2FA method."""
+	message = graphene.String()
+	recovery_codes = graphene.List(graphene.NonNull(graphene.String), required=True)
+	status = graphene.Field(MfaStatusType)
+
+	class Arguments:
+		setup_token = graphene.String(required=True)
+		code = graphene.String(required=True)
+
+	@login_required
+	def mutate(self, info, setup_token, code):
+		user = info.context.user
+		try:
+			recovery_codes = mfa.confirm_email_setup(user, setup_token, code)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return ConfirmEmailOtpSetup(
+			message='Email codes turned on',
+			recovery_codes=recovery_codes,
+			status=MfaStatusType(**mfa.get_mfa_status(user)),
+		)
+
+
+class SetPreferredMfaMethod(graphene.Mutation):
+	"""Choose which method the login screen starts with: 'totp' or 'email'."""
+	message = graphene.String()
+	status = graphene.Field(MfaStatusType)
+
+	class Arguments:
+		method = graphene.String(required=True)
+
+	@login_required
+	def mutate(self, info, method):
+		user = info.context.user
+		try:
+			mfa.set_preferred_method(user, method)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return SetPreferredMfaMethod(message='Default method updated', status=MfaStatusType(**mfa.get_mfa_status(user)))
+
+
+class ResendMfaEmailCode(graphene.Mutation):
+	"""
+	Public: during login, email a code for the pending challenge. Also used when the
+	user switches from the authenticator app to email. Limited to one send a minute.
+	"""
+	message = graphene.String()
+
+	class Arguments:
+		mfa_token = graphene.String(required=True)
+
+	def mutate(self, info, mfa_token):
+		try:
+			mfa.resend_login_email_code(mfa_token)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return ResendMfaEmailCode(message='We sent a code to your email')
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	verify_mfa_login = VerifyMfaLogin.Field()
@@ -373,3 +466,8 @@ class UserMutations(graphene.ObjectType):
 	configure_user_settings = ConfigureUserSettings.Field()
 	start_totp_setup = StartTotpSetup.Field()
 	confirm_totp_setup = ConfirmTotpSetup.Field()
+	start_email_otp_setup = StartEmailOtpSetup.Field()
+	resend_email_otp_setup_code = ResendEmailOtpSetupCode.Field()
+	confirm_email_otp_setup = ConfirmEmailOtpSetup.Field()
+	set_preferred_mfa_method = SetPreferredMfaMethod.Field()
+	resend_mfa_email_code = ResendMfaEmailCode.Field()

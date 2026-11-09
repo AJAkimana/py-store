@@ -21,7 +21,9 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from app_utils.emailing.auth_email import send_mfa_code_email, send_mfa_change_email
+from app_utils.emailing.auth_email import (
+	send_mfa_code_email, send_mfa_change_email, send_password_reset_code_email,
+)
 from d2dstore.logger import logger
 from apps.users.models import (
 	User, UserMfa, MfaMethod, MfaChallenge, MfaChallengePurpose, MfaRecoveryCode,
@@ -313,7 +315,9 @@ def send_email_code(challenge: MfaChallenge):
 		# Development only, so the flow works without SMTP. Never runs with DEBUG off
 		logger.info(f'[MFA] Email code for {challenge.user.email}: {code}')
 
-	sent = send_mfa_code_email(challenge.user, code, int(CHALLENGE_TTL.total_seconds() // 60))
+	send = send_password_reset_code_email if challenge.purpose == MfaChallengePurpose.PASSWORD_RESET \
+		else send_mfa_code_email
+	sent = send(challenge.user, code, int(CHALLENGE_TTL.total_seconds() // 60))
 	if sent['has_error']:
 		if settings.DEBUG:
 			logger.warning(f'[MFA] Email not sent ({sent["message"]}); use the code logged above')
@@ -347,7 +351,8 @@ def verify_challenge(challenge: MfaChallenge, method: str, code: str) -> User:
 	mfa = get_user_mfa(user)
 	enabled = mfa.enabled_methods if mfa else []
 
-	if challenge.purpose == MfaChallengePurpose.SETUP_EMAIL:
+	if challenge.purpose in (MfaChallengePurpose.SETUP_EMAIL, MfaChallengePurpose.PASSWORD_RESET):
+		# Proves access to the mailbox; doesn't depend on 2FA being on
 		ok = method == MfaMethod.EMAIL and _check_email_code(challenge, code)
 	elif method == MfaMethod.TOTP:
 		ok = MfaMethod.TOTP.value in enabled and _accept_totp(mfa, code)

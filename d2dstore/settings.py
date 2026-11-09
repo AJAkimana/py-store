@@ -175,7 +175,8 @@ MFA_ENCRYPTION_KEY = os.getenv('MFA_ENCRYPTION_KEY', '')
 MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', 'D2DStore')
 
 AUTHENTICATION_BACKENDS = [
-	'graphql_jwt.backends.JSONWebTokenBackend',
+	# graphql_jwt's backend, plus rejecting tokens issued before a password reset
+	'apps.users.backends.SessionAwareJSONWebTokenBackend',
 	'django.contrib.auth.backends.ModelBackend',
 ]
 AUTH_USER_MODEL = 'users.User'

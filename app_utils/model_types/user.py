@@ -6,7 +6,7 @@ from apps.users.models import User, UserSettings, Currency
 class UserType(DjangoObjectType):
 	class Meta:
 		model = User
-		exclude_fields = ('password', 'previous_passwords')
+		exclude_fields = ('password', 'previous_passwords', 'password_changed_at')
 
 
 class WelcomeType(graphene.ObjectType):

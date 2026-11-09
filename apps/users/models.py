@@ -25,6 +25,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 	is_active = models.BooleanField(default=True)
 	is_verified = models.BooleanField(default=True)
 	previous_passwords = models.TextField()
+	# Set when the password is reset; access tokens issued before it are rejected
+	password_changed_at = models.DateTimeField(null=True, blank=True)
 	# household = models.ForeignKey(Household, related_name='members', on_delete=models.PROTECT, null=True)
 	created_at = models.DateTimeField(auto_now_add=True, null=True)
 	updated_at = models.DateTimeField(auto_now=True, null=True)
@@ -260,6 +262,7 @@ class MfaChallengePurpose(models.TextChoices):
 	SETUP_EMAIL = 'setup_email', 'Email setup'
 	# Re-checking the second factor before turning 2FA off or replacing recovery codes
 	SENSITIVE = 'sensitive', 'Sensitive action'
+	PASSWORD_RESET = 'password_reset', 'Password reset'
 
 
 class MfaChallenge(BaseModel):

@@ -14,7 +14,7 @@ from app_utils.validations.validate_user import ValidateUser
 from apps.users.models import User, UserSettings, Currency, MfaMethod
 from apps.users.session import issue_session, revoke_refresh_tokens, current_refresh_token
 from app_utils.model_types.user import UserType, MfaStatusType, TotpSetupType
-from apps.users import mfa
+from apps.users import mfa, password_reset
 
 APPEARANCE_FIELDS = ('theme_mode', 'primary_color', 'secondary_color')
 
@@ -534,6 +534,46 @@ class RegenerateRecoveryCodes(graphene.Mutation):
 		)
 
 
+class RequestPasswordReset(graphene.Mutation):
+	"""
+	Public: email a password reset code. The response is the same whether or not
+	the email has an account. Call again to resend (at most once a minute).
+	"""
+	message = graphene.String()
+	reset_token = graphene.String()
+
+	class Arguments:
+		email = graphene.String(required=True)
+
+	def mutate(self, info, email):
+		return RequestPasswordReset(
+			message='If an account uses this email, we sent a code to it.',
+			reset_token=password_reset.request_password_reset(email),
+		)
+
+
+class ResetPasswordWithCode(graphene.Mutation):
+	"""
+	Public: set a new password with the emailed code. Doesn't sign in, and signs out
+	every device, including the one making the request.
+	"""
+	message = graphene.String()
+
+	class Arguments:
+		reset_token = graphene.String(required=True)
+		code = graphene.String(required=True)
+		new_password = graphene.String(required=True)
+
+	def mutate(self, info, reset_token, code, new_password):
+		try:
+			password_reset.reset_password_with_code(reset_token, code, new_password)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		# This device is signed out too: clear its refresh cookie
+		info.context.delete_refresh_token_cookie = True
+		return ResetPasswordWithCode(message='Your password was reset. Sign in with your new password.')
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	verify_mfa_login = VerifyMfaLogin.Field()
@@ -555,3 +595,5 @@ class UserMutations(graphene.ObjectType):
 	send_mfa_action_email_code = SendMfaActionEmailCode.Field()
 	disable_mfa = DisableMfa.Field()
 	regenerate_recovery_codes = RegenerateRecoveryCodes.Field()
+	request_password_reset = RequestPasswordReset.Field()
+	reset_password_with_code = ResetPasswordWithCode.Field()

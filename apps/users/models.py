@@ -210,6 +210,10 @@ class UserMfa(BaseModel):
 	# Last accepted TOTP time step, so a code can't be replayed inside its window
 	totp_last_used_step = models.BigIntegerField(null=True, blank=True)
 
+	# Failed login codes across challenges; a fresh login doesn't reset them
+	failed_attempts = models.PositiveSmallIntegerField(default=0)
+	locked_until = models.DateTimeField(null=True, blank=True)
+
 	email_otp_enabled = models.BooleanField(default=False)
 	preferred_method = models.CharField(
 		max_length=10,

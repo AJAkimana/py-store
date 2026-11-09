@@ -89,7 +89,9 @@ def reset_password_with_code(reset_token: str, code: str, new_password: str):
 		# Proving access to the email is enough to clear "create a new password first"
 		user.is_verified = True
 		user.password_changed_at = timezone.now()
-		user.save(update_fields=['password', 'is_verified', 'password_changed_at'])
+		# Also completes a pending invite: the temporary password is gone
+		user.temp_password_expires_at = None
+		user.save(update_fields=['password', 'is_verified', 'password_changed_at', 'temp_password_expires_at'])
 		revoke_refresh_tokens(user)
 		Token.objects.filter(user=user).delete()
 		mfa.notify_mfa_change(user, 'password_reset')

@@ -34,5 +34,17 @@ def revoke_refresh_tokens(user: User, keep_token: str = None) -> int:
 	return tokens.update(revoked=timezone.now())
 
 
+def end_all_sessions(user: User):
+	"""
+	Sign the user out on every device right away: revoke refresh and REST tokens and
+	reject access tokens issued before now (see SessionAwareJSONWebTokenBackend).
+	Saves only 'password_changed_at'.
+	"""
+	user.password_changed_at = timezone.now()
+	user.save(update_fields=['password_changed_at'])
+	revoke_refresh_tokens(user)
+	Token.objects.filter(user=user).delete()
+
+
 def current_refresh_token(info) -> str:
 	return info.context.COOKIES.get(jwt_settings.JWT_REFRESH_TOKEN_COOKIE_NAME)

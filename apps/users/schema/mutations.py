@@ -10,55 +10,12 @@ from graphql_jwt.exceptions import JSONWebTokenError
 from graphql_jwt.settings import jwt_settings
 from app_utils.database import get_model_object
 from app_utils.emailing.auth_email import send_test_email
-from app_utils.validations.validate_user import ValidateUser
 from apps.users.models import User, UserSettings, Currency, MfaMethod
 from apps.users.session import issue_session, revoke_refresh_tokens, current_refresh_token
-from app_utils.model_types.user import UserType, MfaStatusType, TotpSetupType
-from apps.users import mfa, password_reset
+from app_utils.model_types.user import UserType, MfaStatusType, TotpSetupType, ManagedUserType
+from apps.users import mfa, password_reset, user_management
 
 APPEARANCE_FIELDS = ('theme_mode', 'primary_color', 'secondary_color')
-
-
-class RegisterUser(graphene.Mutation):
-	"""
-    This is a mutation used to create new users
-    """
-	user = graphene.Field(UserType)
-	message = graphene.String()
-
-	class Arguments:
-		email = graphene.String()
-		phone = graphene.String()
-		user_name = graphene.String()
-		password = graphene.String()
-		configure_household = graphene.Boolean()
-
-	@login_required
-	@superuser_required
-	def mutate(self, info, **kwargs):
-		user = User()
-		validator = ValidateUser(**kwargs)
-		new_user = validator.validate_and_save_user(user)
-
-		return RegisterUser(message='Success', user=new_user)
-
-
-class UpdateRegisteredUser(RegisterUser):
-	"""
-This is a mutation used to update new users
-"""
-
-	class Arguments(RegisterUser.Arguments):
-		id = graphene.String(required=True)
-
-	@login_required
-	@superuser_required
-	def mutate(self, info, **kwargs):
-		user = get_model_object(User, 'id', kwargs.get('id'))
-		validator = ValidateUser(**kwargs)
-
-		updated_user = validator.validate_and_save_user(user)
-		return UpdateRegisteredUser(message='Successfully update', user=updated_user)
 
 
 class LoginUser(graphene.Mutation):
@@ -79,6 +36,10 @@ The refresh token is set as an HttpOnly cookie, never returned in the body.
 
 When two-factor authentication is on, no session is issued: the response has
 mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
+
+When the user signed in with an invite's temporary password, no session is issued:
+the response has password_change_required=True and a password_change_token to send
+to 'setInitialPassword', after which the client signs in with the new password.
 """
 	message = graphene.String()
 	token = graphene.String()
@@ -88,6 +49,8 @@ mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
 	mfa_token = graphene.String()
 	mfa_methods = graphene.List(graphene.NonNull(graphene.String))
 	mfa_default_method = graphene.String()
+	password_change_required = graphene.Boolean(required=True)
+	password_change_token = graphene.String()
 
 	class Arguments:
 		email = graphene.String()
@@ -100,7 +63,14 @@ mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
 			raise GraphQLError('Invalid credentials')
 
 		if not user_auth.is_verified:
-			raise GraphQLError('Create a new password first')
+			if user_management.temp_password_expired(user_auth):
+				raise GraphQLError('Your temporary password has expired. Ask your administrator to send a new invite.')
+			return LoginUser(
+				message='Choose your own password to continue',
+				mfa_required=False,
+				password_change_required=True,
+				password_change_token=user_management.password_change_token(user_auth),
+			)
 
 		if mfa.is_mfa_enabled(user_auth):
 			try:
@@ -114,11 +84,12 @@ mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
 				mfa_token=challenge['mfa_token'],
 				mfa_methods=challenge['methods'],
 				mfa_default_method=challenge['default_method'],
+				password_change_required=False,
 			)
 
 		token, rest_token = issue_session(info, user_auth)
 		return LoginUser(message='Success', token=token, rest_token=rest_token,
-										 user=user_auth, mfa_required=False)
+										 user=user_auth, mfa_required=False, password_change_required=False)
 
 
 class VerifyMfaLogin(graphene.Mutation):
@@ -574,13 +545,124 @@ class ResetPasswordWithCode(graphene.Mutation):
 		return ResetPasswordWithCode(message='Your password was reset. Sign in with your new password.')
 
 
+class SetInitialPassword(graphene.Mutation):
+	"""
+	Public: replace an invite's temporary password, with the token from 'loginUser'.
+	Doesn't sign in; sign in again with the new password.
+	"""
+	message = graphene.String()
+
+	class Arguments:
+		password_change_token = graphene.String(required=True)
+		new_password = graphene.String(required=True)
+
+	def mutate(self, info, password_change_token, new_password):
+		try:
+			user_management.set_initial_password(password_change_token, new_password)
+		except user_management.UserManagementError as error:
+			raise GraphQLError(str(error))
+		return SetInitialPassword(message='Password set')
+
+
+class UserInput(graphene.InputObjectType):
+	first_name = graphene.String()
+	last_name = graphene.String()
+	user_name = graphene.String()
+	email = graphene.String()
+	phone = graphene.String()
+
+
+class CreateUser(graphene.Mutation):
+	"""
+	Administrator: create a regular user with their own household and email them an
+	invite with a temporary password. If 'inviteSent' is false, resend the invite.
+	"""
+	message = graphene.String()
+	user = graphene.Field(ManagedUserType)
+	invite_sent = graphene.Boolean(required=True)
+
+	class Arguments:
+		input = UserInput(required=True)
+
+	@login_required
+	@superuser_required
+	def mutate(self, info, input):
+		try:
+			user, invite_sent = user_management.create_user(info.context.user, **input)
+		except user_management.UserManagementError as error:
+			raise GraphQLError(str(error))
+		message = 'User created and invited' if invite_sent else \
+			"User created, but the invite email couldn't be sent. Try resending it."
+		return CreateUser(message=message, user=user, invite_sent=invite_sent)
+
+
+class UpdateUser(graphene.Mutation):
+	"""
+	Administrator: change a user's details (only fields sent). A new email signs the
+	user out everywhere; a pending invite is re-sent to it ('inviteSent').
+	"""
+	message = graphene.String()
+	user = graphene.Field(ManagedUserType)
+	invite_sent = graphene.Boolean()
+
+	class Arguments:
+		id = graphene.ID(required=True)
+		input = UserInput(required=True)
+
+	@login_required
+	@superuser_required
+	def mutate(self, info, id, input):
+		try:
+			user, invite_sent = user_management.update_user(info.context.user, id, **input)
+		except user_management.UserManagementError as error:
+			raise GraphQLError(str(error))
+		return UpdateUser(message='User updated', user=user, invite_sent=invite_sent)
+
+
+class SetUserActive(graphene.Mutation):
+	"""Administrator: disable (signs out everywhere, keeps data) or re-enable a user."""
+	message = graphene.String()
+	user = graphene.Field(ManagedUserType)
+
+	class Arguments:
+		id = graphene.ID(required=True)
+		active = graphene.Boolean(required=True)
+
+	@login_required
+	@superuser_required
+	def mutate(self, info, id, active):
+		try:
+			user = user_management.set_user_active(info.context.user, id, active)
+		except user_management.UserManagementError as error:
+			raise GraphQLError(str(error))
+		return SetUserActive(message='User enabled' if active else 'User disabled', user=user)
+
+
+class ResendUserInvite(graphene.Mutation):
+	"""Administrator: email a new temporary password to a user who hasn't signed in yet."""
+	message = graphene.String()
+	user = graphene.Field(ManagedUserType)
+	invite_sent = graphene.Boolean(required=True)
+
+	class Arguments:
+		id = graphene.ID(required=True)
+
+	@login_required
+	@superuser_required
+	def mutate(self, info, id):
+		try:
+			invite_sent = user_management.resend_invite(info.context.user, id)
+		except user_management.UserManagementError as error:
+			raise GraphQLError(str(error))
+		message = 'Invite sent' if invite_sent else "The invite email couldn't be sent. Try again later."
+		return ResendUserInvite(message=message, user=user_management.User.objects.get(pk=id), invite_sent=invite_sent)
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	verify_mfa_login = VerifyMfaLogin.Field()
 	reset_password = ResetPassword.Field()
 	update_user_profile = UpdateUserProfile.Field()
-	register_user = RegisterUser.Field()
-	update_registered_user = UpdateRegisteredUser.Field()
 	logout_user = LogoutUser.Field()
 	refresh_token = RefreshToken.Field()
 	send_confirmation_email = SendConfirmationEmail.Field()
@@ -597,3 +679,8 @@ class UserMutations(graphene.ObjectType):
 	regenerate_recovery_codes = RegenerateRecoveryCodes.Field()
 	request_password_reset = RequestPasswordReset.Field()
 	reset_password_with_code = ResetPasswordWithCode.Field()
+	set_initial_password = SetInitialPassword.Field()
+	create_user = CreateUser.Field()
+	update_user = UpdateUser.Field()
+	set_user_active = SetUserActive.Field()
+	resend_user_invite = ResendUserInvite.Field()

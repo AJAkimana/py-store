@@ -174,6 +174,11 @@ GRAPHQL_JWT = {
 MFA_ENCRYPTION_KEY = os.getenv('MFA_ENCRYPTION_KEY', '')
 MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', 'D2DStore')
 
+# Used in emails that link to the app, eg: invites
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+# How long an invited user's temporary password works
+INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', '7'))
+
 AUTHENTICATION_BACKENDS = [
 	# graphql_jwt's backend, plus rejecting tokens issued before a password reset
 	'apps.users.backends.SessionAwareJSONWebTokenBackend',

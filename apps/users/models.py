@@ -25,8 +25,16 @@ class User(AbstractBaseUser, PermissionsMixin):
 	is_active = models.BooleanField(default=True)
 	is_verified = models.BooleanField(default=True)
 	previous_passwords = models.TextField()
-	# Set when the password is reset; access tokens issued before it are rejected
+	# Access tokens issued before this are rejected (set on password reset, email change, disable)
 	password_changed_at = models.DateTimeField(null=True, blank=True)
+	# Invites: the user signs in with an emailed temporary password, then must choose their own
+	invited_at = models.DateTimeField(null=True, blank=True)
+	temp_password_expires_at = models.DateTimeField(null=True, blank=True)
+	# Disabled accounts keep their data; these say when and by whom
+	deactivated_at = models.DateTimeField(null=True, blank=True)
+	deactivated_by = models.ForeignKey(
+		'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+	)
 	# household = models.ForeignKey(Household, related_name='members', on_delete=models.PROTECT, null=True)
 	created_at = models.DateTimeField(auto_now_add=True, null=True)
 	updated_at = models.DateTimeField(auto_now=True, null=True)

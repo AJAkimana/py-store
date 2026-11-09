@@ -83,3 +83,48 @@ def send_mfa_code_email(user, code: str, valid_minutes: int):
 	email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)
 
 	return smtp_send_email([user.email], subject, email_body_html)
+
+
+def _render_email(subject: str, full_names: str, email_body_content: str) -> str:
+	email_body_html = template_email()
+	email_body_html = email_body_html.replace("[[email_subject]]", subject)
+	email_body_html = email_body_html.replace("[[email_full_names]]", full_names)
+	return email_body_html.replace("[[email_body_content]]", email_body_content)
+
+
+def _full_names(user) -> str:
+	return f'{user.first_name} {user.last_name}'.strip() or user.email
+
+
+def send_user_invite_email(user, temp_password: str, login_url: str, valid_days: int):
+	"""Invite a new user with their temporary password. Returns {has_error, message}."""
+	subject = "You've been invited to D2DStore"
+	email_body_content = f"""
+		<div style="margin-bottom:14pt">An account was created for you. Sign in with:</div>
+		<div style="margin-bottom:6pt">Email: <strong>{user.email}</strong></div>
+		<div style="margin-bottom:14pt">Temporary password:
+			<strong style="font-size:16pt; letter-spacing:2px">{temp_password}</strong></div>
+		<div style="margin-bottom:14pt"><a href="{login_url}">Sign in to D2DStore</a></div>
+		<div style="margin-bottom:14pt">You'll be asked to choose your own password when you first
+		sign in. The temporary password expires in {valid_days} days.</div>
+	"""
+	return smtp_send_email([user.email], subject, _render_email(subject, _full_names(user), email_body_content))
+
+
+def send_account_disabled_email(user):
+	subject = 'Your D2DStore account was disabled'
+	email_body_content = """
+		<div style="margin-bottom:14pt">Your account was disabled by an administrator and you
+		were signed out. Your data is kept. Contact your administrator if you think this is a mistake.</div>
+	"""
+	return smtp_send_email([user.email], subject, _render_email(subject, _full_names(user), email_body_content))
+
+
+def send_email_changed_email(user, old_email: str):
+	"""Sent to the old address when an administrator changes the account's email."""
+	subject = 'Your D2DStore email address was changed'
+	email_body_content = f"""
+		<div style="margin-bottom:14pt">An administrator changed the email address on your account
+		to <strong>{user.email}</strong>, and you were signed out. Sign in with the new address.</div>
+	"""
+	return smtp_send_email([old_email], subject, _render_email(subject, _full_names(user), email_body_content))

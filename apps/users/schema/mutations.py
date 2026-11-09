@@ -11,8 +11,8 @@ from graphql_jwt.settings import jwt_settings
 from app_utils.database import get_model_object
 from app_utils.emailing.auth_email import send_test_email
 from app_utils.validations.validate_user import ValidateUser
-from apps.users.models import User, UserSettings, Currency
-from apps.users.session import issue_session
+from apps.users.models import User, UserSettings, Currency, MfaMethod
+from apps.users.session import issue_session, revoke_refresh_tokens, current_refresh_token
 from app_utils.model_types.user import UserType, MfaStatusType, TotpSetupType
 from apps.users import mfa
 
@@ -144,6 +144,9 @@ class VerifyMfaLogin(graphene.Mutation):
 		if not user.is_active:
 			raise GraphQLError('Invalid credentials')
 
+		# A recovery code means the usual factor may be lost or stolen: end other sessions
+		if method == MfaMethod.RECOVERY:
+			revoke_refresh_tokens(user)
 		token, rest_token = issue_session(info, user)
 		return VerifyMfaLogin(message='Success', token=token, rest_token=rest_token, user=user)
 
@@ -453,6 +456,84 @@ class ResendMfaEmailCode(graphene.Mutation):
 		return ResendMfaEmailCode(message='We sent a code to your email')
 
 
+class SendMfaActionEmailCode(graphene.Mutation):
+	"""
+	Email a code to confirm turning 2FA off or replacing recovery codes.
+	Without 'actionToken' it starts a new check; with it, it resends the code.
+	"""
+	message = graphene.String()
+	action_token = graphene.String()
+
+	class Arguments:
+		action_token = graphene.String()
+
+	@login_required
+	def mutate(self, info, action_token=None):
+		user = info.context.user
+		try:
+			if action_token:
+				mfa.resend_sensitive_email_code(user, action_token)
+			else:
+				action_token = mfa.start_sensitive_email_challenge(user)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return SendMfaActionEmailCode(message='We sent a code to your email', action_token=action_token)
+
+
+class DisableMfa(graphene.Mutation):
+	"""
+	Turn two-factor authentication off. Needs the password and a current code
+	('method' is 'totp', 'email' with 'actionToken', or 'recovery').
+	Other sessions are signed out.
+	"""
+	message = graphene.String()
+	status = graphene.Field(MfaStatusType)
+
+	class Arguments:
+		password = graphene.String(required=True)
+		method = graphene.String(required=True)
+		code = graphene.String(required=True)
+		action_token = graphene.String()
+
+	@login_required
+	def mutate(self, info, password, method, code, action_token=None):
+		user = info.context.user
+		try:
+			mfa.disable_mfa_checked(user, password, method, code, action_token)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		revoke_refresh_tokens(user, keep_token=current_refresh_token(info))
+		return DisableMfa(
+			message='Two-factor authentication turned off',
+			status=MfaStatusType(**mfa.get_mfa_status(user)),
+		)
+
+
+class RegenerateRecoveryCodes(graphene.Mutation):
+	"""Replace all recovery codes after checking a current code. Show the new ones once."""
+	message = graphene.String()
+	recovery_codes = graphene.List(graphene.NonNull(graphene.String), required=True)
+	status = graphene.Field(MfaStatusType)
+
+	class Arguments:
+		method = graphene.String(required=True)
+		code = graphene.String(required=True)
+		action_token = graphene.String()
+
+	@login_required
+	def mutate(self, info, method, code, action_token=None):
+		user = info.context.user
+		try:
+			recovery_codes = mfa.regenerate_recovery_codes_checked(user, method, code, action_token)
+		except mfa.MfaError as error:
+			raise GraphQLError(str(error))
+		return RegenerateRecoveryCodes(
+			message='New recovery codes created',
+			recovery_codes=recovery_codes,
+			status=MfaStatusType(**mfa.get_mfa_status(user)),
+		)
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	verify_mfa_login = VerifyMfaLogin.Field()
@@ -471,3 +552,6 @@ class UserMutations(graphene.ObjectType):
 	confirm_email_otp_setup = ConfirmEmailOtpSetup.Field()
 	set_preferred_mfa_method = SetPreferredMfaMethod.Field()
 	resend_mfa_email_code = ResendMfaEmailCode.Field()
+	send_mfa_action_email_code = SendMfaActionEmailCode.Field()
+	disable_mfa = DisableMfa.Field()
+	regenerate_recovery_codes = RegenerateRecoveryCodes.Field()

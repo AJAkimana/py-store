@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+import threading
 from datetime import timedelta
 
 import pyotp
@@ -20,7 +21,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from app_utils.emailing.auth_email import send_mfa_code_email
+from app_utils.emailing.auth_email import send_mfa_code_email, send_mfa_change_email
 from d2dstore.logger import logger
 from apps.users.models import (
 	User, UserMfa, MfaMethod, MfaChallenge, MfaChallengePurpose, MfaRecoveryCode,
@@ -243,6 +244,7 @@ def confirm_totp_setup(user: User, code: str) -> list:
 	if not mfa.preferred_method:
 		mfa.preferred_method = MfaMethod.TOTP.value
 	_save_mfa(mfa, ['totp_confirmed_at', 'preferred_method'])
+	notify_mfa_change(user, 'totp_enabled')
 	return [] if was_enabled else generate_recovery_codes(user)
 
 
@@ -356,28 +358,38 @@ def verify_challenge(challenge: MfaChallenge, method: str, code: str) -> User:
 	else:
 		ok = False
 
+	counts_toward_lock = challenge.purpose in _LOCKED_PURPOSES and mfa
 	if not ok:
-		if challenge.purpose == MfaChallengePurpose.LOGIN and mfa:
-			_record_failed_login_code(mfa)
+		if counts_toward_lock:
+			_record_failed_code(mfa)
 		# Return instead of raising so the transaction commits the counted attempt
 		return None
 
 	challenge.consumed_at = timezone.now()
 	challenge.save(update_fields=['consumed_at'])
-	if challenge.purpose == MfaChallengePurpose.LOGIN and mfa and mfa.failed_attempts:
-		UserMfa.objects.filter(pk=mfa.pk).update(failed_attempts=0, locked_until=None)
+	if counts_toward_lock:
+		_reset_failed_codes(mfa)
 	return user
 
 
-def _record_failed_login_code(mfa: UserMfa):
+# Challenges that check an already-enabled factor share the per-user failure lock
+_LOCKED_PURPOSES = (MfaChallengePurpose.LOGIN, MfaChallengePurpose.SENSITIVE)
+
+
+def _record_failed_code(mfa: UserMfa):
 	mfa = UserMfa.objects.select_for_update().get(pk=mfa.pk)
 	mfa.failed_attempts += 1
 	if mfa.failed_attempts >= MAX_FAILED_LOGIN_CODES:
 		mfa.failed_attempts = 0
 		mfa.locked_until = timezone.now() + LOGIN_LOCK_DURATION
-		# Drop the open challenge so the lock applies right away
-		MfaChallenge.all_objects.filter(user_id=mfa.user_id, purpose=MfaChallengePurpose.LOGIN).hard_delete()
+		# Drop open challenges so the lock applies right away
+		MfaChallenge.all_objects.filter(user_id=mfa.user_id, purpose__in=_LOCKED_PURPOSES).hard_delete()
 	_save_mfa(mfa, ['failed_attempts', 'locked_until'])
+
+
+def _reset_failed_codes(mfa: UserMfa):
+	if mfa.failed_attempts or mfa.locked_until:
+		UserMfa.objects.filter(pk=mfa.pk).update(failed_attempts=0, locked_until=None)
 
 
 def _ensure_not_locked(mfa: UserMfa):
@@ -433,7 +445,10 @@ def verify_login(mfa_token: str, method: str, code: str) -> User:
 	mfa = get_user_mfa(challenge.user)
 	if mfa:
 		_ensure_not_locked(mfa)
-	return verify_challenge_or_raise(challenge, method, code)
+	user = verify_challenge_or_raise(challenge, method, code)
+	if method == MfaMethod.RECOVERY:
+		notify_mfa_change(user, 'recovery_used')
+	return user
 
 
 def start_email_setup(user: User) -> str:
@@ -462,6 +477,7 @@ def confirm_email_setup(user: User, setup_token: str, code: str) -> list:
 	if not mfa.preferred_method:
 		mfa.preferred_method = MfaMethod.EMAIL.value
 	_save_mfa(mfa, ['email_otp_enabled', 'preferred_method'])
+	notify_mfa_change(user, 'email_enabled')
 	return [] if was_enabled else generate_recovery_codes(user)
 
 
@@ -473,11 +489,102 @@ def set_preferred_method(user: User, method: str):
 	_save_mfa(mfa, ['preferred_method'])
 
 
+# ---------------------------------------------------------------------------
+# Sensitive actions: turning 2FA off and replacing recovery codes
+# ---------------------------------------------------------------------------
+
+def start_sensitive_email_challenge(user: User) -> str:
+	"""Email a code to confirm a sensitive action. Returns the token to send back with it."""
+	mfa = get_user_mfa(user)
+	if not mfa or not mfa.email_otp_enabled:
+		raise MfaError('Email codes are not turned on')
+	_ensure_not_locked(mfa)
+	challenge = create_challenge(user, MfaChallengePurpose.SENSITIVE)
+	send_email_code(challenge)
+	return sign_challenge(challenge)
+
+
+def resend_sensitive_email_code(user: User, action_token: str):
+	mfa = get_user_mfa(user)
+	if mfa:
+		_ensure_not_locked(mfa)
+	send_email_code(load_challenge(action_token, MfaChallengePurpose.SENSITIVE, user=user))
+
+
+def verify_current_factor(user: User, method: str, code: str, action_token: str = None):
+	"""
+	Re-check a factor the user already has, before a sensitive action. 'email' needs the
+	token from start_sensitive_email_challenge. Failures count toward the per-user lock.
+	"""
+	mfa = get_user_mfa(user)
+	if not mfa or not mfa.is_enabled:
+		raise MfaError('Two-factor authentication is not turned on')
+	_ensure_not_locked(mfa)
+
+	if method == MfaMethod.EMAIL:
+		challenge = load_challenge(action_token, MfaChallengePurpose.SENSITIVE, user=user)
+		verify_challenge_or_raise(challenge, method, code)
+		return
+
+	with transaction.atomic():
+		if method == MfaMethod.TOTP:
+			ok = mfa.totp_enabled and _accept_totp(mfa, code)
+		elif method == MfaMethod.RECOVERY:
+			ok = use_recovery_code(user, code)
+		else:
+			ok = False
+		if ok:
+			_reset_failed_codes(mfa)
+		else:
+			_record_failed_code(mfa)
+	if not ok:
+		raise MfaError(INVALID_CODE_MESSAGE)
+
+
+def disable_mfa_checked(user: User, password: str, method: str, code: str, action_token: str = None):
+	"""Turn 2FA off after checking the password and a current factor."""
+	if not user.check_password(password or ''):
+		raise MfaError('Incorrect password')
+	verify_current_factor(user, method, code, action_token)
+	with transaction.atomic():
+		disable_mfa(user)
+		notify_mfa_change(user, 'disabled')
+
+
+def regenerate_recovery_codes_checked(user: User, method: str, code: str, action_token: str = None) -> list:
+	"""Replace recovery codes after checking a current factor. Old codes stop working."""
+	verify_current_factor(user, method, code, action_token)
+	with transaction.atomic():
+		codes = generate_recovery_codes(user)
+		notify_mfa_change(user, 'recovery_regenerated')
+	return codes
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+def notify_mfa_change(user: User, event: str):
+	"""
+	Email the user about a 2FA change once the transaction commits. Sent from a
+	background thread so SMTP doesn't slow the request; failures are only logged.
+	"""
+	def send():
+		try:
+			result = send_mfa_change_email(user, event)
+			if result['has_error']:
+				logger.warning(f'[MFA] Could not send "{event}" alert to {user.email}: {result["message"]}')
+		except Exception as error:  # never let an alert break the request
+			logger.warning(f'[MFA] Could not send "{event}" alert to {user.email}: {error}')
+
+	transaction.on_commit(lambda: threading.Thread(target=send, daemon=True).start())
+
+
 @transaction.atomic
 def disable_mfa(user: User):
 	"""
 	Turn every method off and drop recovery codes and open challenges.
-	The caller must already have checked the password and a current code.
+	No checks here: use disable_mfa_checked from user-facing code.
 	"""
 	UserMfa.objects.filter(user=user).update(
 		totp_secret_encrypted='', totp_confirmed_at=None, totp_last_used_step=None,
@@ -489,7 +596,7 @@ def disable_mfa(user: User):
 
 
 def delete_expired_challenges() -> int:
-	"""Housekeeping for a cron job (wired up in a later step)."""
+	"""Housekeeping, meant for a future cron job (not scheduled yet)."""
 	deleted, _ = MfaChallenge.all_objects.filter(
 		Q(expires_at__lte=timezone.now()) | Q(consumed_at__isnull=False)
 	).hard_delete()

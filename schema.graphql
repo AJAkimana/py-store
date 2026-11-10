@@ -1,0 +1,1126 @@
+schema {
+  query: AppQuery
+  mutation: AppMutations
+}
+
+type AppQuery {
+  behaviorsList(searchKey: String): BehaviorPaginatorType
+  budgets(searchKey: String, searchStartDate: String, searchEndDate: String, pageCount: Int, pageNumber: Int, searchMember: String): BudgetPaginatorType
+  currentBudget(budgetId: String): BudgetDetailType
+  defaultBudgetLines: [DefaultBudgetLineType]
+  userBudgetLines(active: Boolean): [UserBudgetLineType]
+  allBudgetLines(isGlobalSetup: Boolean, isAppSetup: Boolean): [BudgetLineType]
+  myHouseholdMemberships: [HouseholdMemberType]
+  households: [HouseholdType]
+  dbBackup: DbBackupType
+  salaries(createdAt: Date, pageCount: Int, pageNumber: Int): SalaryPaginatorType
+  rateCurrencies(amount: Float, base: String, targets: [String], period: String): [ConvertedCurrencyType]
+  properties(search: String, isActive: String, pageCount: Int, pageNumber: Int): PropPaginatorType
+  propertiesDetail(isActive: String): PropertyDetailType
+  stores(searchKey: String, searchDateFrom: String, searchDateTo: String, searchType: String, pageCount: Int, pageNumber: Int, storeType: String, searchMember: String, transactionType: String, budgetLineId: String): StorePaginatorType
+  store(id: String!): StoreType
+  totalInflow(storeType: String): Int
+  totalOutflow(storeType: String): Int
+  storeCount: Int
+  monthlyStore(isInflow: Boolean, time: String): [MonthType]
+  storeAggregate(storeType: String): StoreRatioType
+  recurringStores(searchKey: String): RecurringStorePaginatorType
+  triggerStoreReport(reportType: String): String
+  me: UserType
+  welcome: WelcomeType
+  users(
+    search: String
+
+    """'active', 'invited' or 'disabled'; all when empty"""
+    status: String
+    pageCount: Int
+    pageNumber: Int
+  ): PaginatorManagedUserType
+  userSettings: UserSettingsType
+  currencies: [CurrencyType]
+  mfaStatus: MfaStatusType!
+  _debug: DjangoDebug
+}
+
+type BehaviorPaginatorType {
+  numPages: Int
+  totalCount: Int
+  pageData: [BehaviorType]
+}
+
+type BehaviorType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  description: String
+  weight: Float!
+  user: UserType
+  household: HouseholdType
+}
+
+"""
+Leverages the internal Python implementation of UUID (uuid.UUID) to provide native UUID objects
+in fields, resolvers and input.
+"""
+scalar UUID
+
+"""
+The `DateTime` scalar type represents a DateTime
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar DateTime
+
+type UserType {
+  lastLogin: DateTime
+
+  """
+  Designates that this user has all permissions without explicitly assigning them.
+  """
+  isSuperuser: Boolean!
+  id: UUID!
+  firstName: String!
+  lastName: String!
+  middleName: String!
+  userName: String!
+  phone: String!
+  profilePicture: String
+  email: String!
+  isStaff: Boolean!
+  isActive: Boolean!
+  isVerified: Boolean!
+  createdAt: DateTime
+  updatedAt: DateTime
+  settings: UserSettingsType
+  creator: [HouseholdType!]!
+  householdSet: [HouseholdType!]!
+  userBudgetLines: [UserBudgetLineType!]!
+  budgets: [BudgetType!]!
+  userBudgetItems: [BudgetItemType!]!
+  properties: [PropertyType!]!
+  stores: [StoreType!]!
+  recurringStores: [RecurringStoreType!]!
+  member: [HouseholdMemberType!]!
+  behaviors: [BehaviorType!]!
+}
+
+type UserSettingsType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  user: UserType!
+
+  """Get updates and alerts via email."""
+  emailNotifications: Boolean!
+
+  """Get browser notifications for important updates."""
+  pushNotifications: Boolean!
+
+  """Get notified when approaching budget limits."""
+  budgetAlertsEnabled: Boolean!
+
+  """Trigger alert at this percent of budget used (1–100)."""
+  budgetAlertThreshold: Int!
+
+  """User's default currency for amounts and budgets."""
+  defaultCurrency: CurrencyType
+
+  """Light or dark interface."""
+  themeMode: String!
+
+  """Main accent color as a #rrggbb hex value."""
+  primaryColor: String!
+
+  """Supporting accent color as a #rrggbb hex value."""
+  secondaryColor: String!
+  emailNotificationsHelpText: String
+  pushNotificationsHelpText: String
+  budgetAlertsEnabledHelpText: String
+  budgetAlertThresholdHelpText: String
+}
+
+type CurrencyType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+
+  """ISO 4217 code, e.g., USD, EUR, GBP."""
+  code: String!
+
+  """Display name, e.g., US Dollar, Euro."""
+  name: String!
+
+  """Optional symbol, e.g., $, €, £."""
+  symbol: String!
+
+  """Number of decimal places, typically 2."""
+  minorUnit: Int!
+  isActive: Boolean!
+
+  """User's default currency for amounts and budgets."""
+  defaultUsersCurrency: [UserSettingsType!]!
+}
+
+type HouseholdType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  description: String!
+  createdBy: UserType
+  members: [UserType!]!
+  budgets: [BudgetType!]!
+  properties: [PropertyType!]!
+  stores: [StoreType!]!
+  family: [HouseholdMemberType!]!
+  behaviors: [BehaviorType!]!
+}
+
+type BudgetType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  description: String
+  status: BudgetingBudgetStatusChoices!
+  startDate: Date!
+  endDate: Date!
+  user: UserType
+  household: HouseholdType
+  budgetItems: [BudgetItemType!]!
+  amount: Float
+  amountSpent: Float
+}
+
+"""An enumeration."""
+enum BudgetingBudgetStatusChoices {
+  """Draft"""
+  DRAFT
+
+  """Pending"""
+  PENDING
+
+  """Approved"""
+  APPROVED
+}
+
+"""
+The `Date` scalar type represents a Date
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar Date
+
+type BudgetItemType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  amount: Float!
+  budget: BudgetType
+  isRecurring: Boolean!
+  user: UserType
+  uBudgetLine: UserBudgetLineType
+  dBudgetLine: DefaultBudgetLineType
+  stores: [StoreType!]!
+  amountSpent: Float
+}
+
+type UserBudgetLineType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  description: String!
+  active: Boolean!
+  enabled: Boolean!
+  amount: Decimal!
+  user: UserType!
+  uBudgetItems: [BudgetItemType!]!
+}
+
+"""The `Decimal` scalar type represents a python Decimal."""
+scalar Decimal
+
+type DefaultBudgetLineType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  description: String!
+  active: Boolean!
+  enabled: Boolean!
+  dBudgetItems: [BudgetItemType!]!
+}
+
+type StoreType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  amount: Float!
+  recordType: StoresStoreRecordTypeChoices!
+  isProperty: Boolean!
+  isInflow: Boolean!
+  description: String!
+  notes: String!
+  actionDate: Date!
+  user: UserType!
+  property: PropertyType
+  household: HouseholdType
+  budgetItem: BudgetItemType
+  isRecurring: Boolean
+}
+
+"""An enumeration."""
+enum StoresStoreRecordTypeChoices {
+  """Store"""
+  USE
+
+  """Debt"""
+  DEBT
+
+  """Online"""
+  ONLINE
+}
+
+type PropertyType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  price: Float!
+  description: String!
+  coverImage: String!
+  owner: UserType!
+  isActive: Boolean!
+  household: HouseholdType
+  propDetails: [DetailType!]!
+  stores: [StoreType!]!
+  detailsCounts: Int
+  detailsIns: Int
+  detailsOuts: Int
+}
+
+type DetailType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  title: String!
+  amount: Float!
+  type: PropertiesPropDetailTypeChoices!
+  property: PropertyType
+}
+
+"""An enumeration."""
+enum PropertiesPropDetailTypeChoices {
+  """Inflow"""
+  IN
+
+  """Outflow"""
+  OUT
+}
+
+type HouseholdMemberType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  user: UserType!
+  household: HouseholdType!
+  accessLevel: HouseholdMembersHouseholdMemberAccessLevelChoices!
+}
+
+"""An enumeration."""
+enum HouseholdMembersHouseholdMemberAccessLevelChoices {
+  """Member Admin"""
+  A_1
+
+  """Staff Admin"""
+  A_2
+
+  """Member"""
+  A_3
+}
+
+type RecurringStoreType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  name: String!
+  user: UserType!
+}
+
+type BudgetPaginatorType {
+  numPages: Int
+  totalCount: Int
+  pageData: [BudgetType]
+}
+
+type BudgetDetailType {
+  id: String
+  name: String
+  amount: Float
+  amountSpent: Float
+  description: String
+  startDate: Date
+  endDate: Date
+  status: String
+  budgetItems: [BudgetItemType]
+}
+
+type BudgetLineType {
+  id: String!
+  name: String
+  description: String
+  amount: Float
+  isSystem: Boolean
+  enabled: Boolean
+}
+
+type DbBackupType {
+  message: String
+}
+
+type SalaryPaginatorType {
+  numPages: Int
+  totalCount: Int
+  pageData: [SalaryType]
+}
+
+type SalaryType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  pension: Float!
+  maternity: Float!
+  tax: Float!
+  netSalary: Float!
+  grossSalary: Float!
+  netPay: Float!
+  clientIp: String!
+  city: String!
+  country: String!
+  lat: String!
+  long: String!
+}
+
+type ConvertedCurrencyType {
+  amount: Float
+  base: String
+  convertedAmount: Float
+  date: String
+  rate: Float
+  target: String
+}
+
+type PropPaginatorType {
+  pageData: [PropertyType]
+  numPages: Int
+  totalCount: Int
+}
+
+type PropertyDetailType {
+  count: Int
+  totalAmount: Int
+}
+
+type StorePaginatorType {
+  numPages: Int
+  totalCount: Int
+  pageData: [StoreType]
+  aggregate: AggregatedInOutFlow
+}
+
+type AggregatedInOutFlow {
+  inflow: Float
+  outflow: Float
+  diff: Float
+}
+
+type MonthType {
+  label: String
+  value: Int
+}
+
+type StoreRatioType {
+  inflow: Int
+  outflow: Int
+  percent: Float
+}
+
+type RecurringStorePaginatorType {
+  numPages: Int
+  totalCount: Int
+  pageData: [RecurringStoreType]
+}
+
+"""Test"""
+type WelcomeType {
+  message: String
+}
+
+type PaginatorManagedUserType {
+  pageData: [ManagedUserType!]!
+  numPages: Int!
+  totalCount: Int!
+}
+
+"""A user as the administrator sees them in user management."""
+type ManagedUserType {
+  id: ID!
+  firstName: String
+  lastName: String
+  userName: String
+  email: String
+  phone: String
+  isActive: Boolean!
+
+  """Hasn't replaced the temporary password yet"""
+  invitePending: Boolean!
+  inviteExpired: Boolean!
+  invitedAt: DateTime
+  tempPasswordExpiresAt: DateTime
+  lastLogin: DateTime
+  createdAt: DateTime
+  deactivatedAt: DateTime
+  deactivatedByName: String
+  mfaEnabled: Boolean!
+}
+
+"""The user's two-factor status. Never carries secrets."""
+type MfaStatusType {
+  enabled: Boolean!
+  totpEnabled: Boolean!
+  emailEnabled: Boolean!
+  methods: [String!]!
+  preferredMethod: String
+  recoveryCodesRemaining: Int!
+}
+
+"""Debugging information for the current query."""
+type DjangoDebug {
+  """Executed SQL queries for this API query."""
+  sql: [DjangoDebugSQL]
+
+  """Raise exceptions for this API query."""
+  exceptions: [DjangoDebugException]
+}
+
+"""Represents a single database query made to a Django managed DB."""
+type DjangoDebugSQL {
+  """The type of database being used (e.g. postrgesql, mysql, sqlite)."""
+  vendor: String!
+
+  """The Django database alias (e.g. 'default')."""
+  alias: String!
+
+  """The actual SQL sent to this database."""
+  sql: String
+
+  """Duration of this database query in seconds."""
+  duration: Float!
+
+  """The raw SQL of this query, without params."""
+  rawSql: String!
+
+  """JSON encoded database query parameters."""
+  params: String!
+
+  """Start time of this database query."""
+  startTime: Float!
+
+  """Stop time of this database query."""
+  stopTime: Float!
+
+  """Whether this database query took more than 10 seconds."""
+  isSlow: Boolean!
+
+  """Whether this database query was a SELECT."""
+  isSelect: Boolean!
+
+  """Postgres transaction ID if available."""
+  transId: String
+
+  """Postgres transaction status if available."""
+  transStatus: String
+
+  """Postgres isolation level if available."""
+  isoLevel: String
+
+  """Postgres connection encoding if available."""
+  encoding: String
+}
+
+"""Represents a single exception raised."""
+type DjangoDebugException {
+  """The class of the exception"""
+  excType: String!
+
+  """The message of the exception"""
+  message: String!
+
+  """The stack trace"""
+  stack: String!
+}
+
+type AppMutations {
+  """Mutation to create a budget. Inherits from 'CreateEditBehavior' class"""
+  evaluateBehavior(actionDate: Date!, description: String, householdId: String, name: String!, rate: String): EvaluateBehavior
+
+  """Mutation to create a budget. Inherits from 'CreateEditBudget' class"""
+  createBudget(description: String, endDate: Date!, householdId: String!, items: [BudgetItemInputType], name: String!, startDate: Date!, status: String): CreateBudget
+
+  """Mutation to update a budget. Inherits from 'CreateEditBudget' class"""
+  updateBudget(description: String, endDate: Date, householdId: String, id: String!, items: [BudgetItemInputType], name: String, startDate: Date, status: String): UpdateBudget
+  createBudgetItems(budgetId: String, items: [BudgetItemInputType]): CreateBudgetItems
+  createBudgetLine(active: Boolean, amount: Float, description: String, isSystem: Boolean, name: String!): CreateBudgetLine
+  deleteBudgetLine(id: String!, isSystem: Boolean!): DeleteBudgetLine
+  enableBudgetLine(id: String!, isGlobalSetup: Boolean, isSystem: Boolean!): EnableBudgetLine
+
+  """
+  Mutation to create a household. Inherits from 'CreateEditHousehold' class
+  """
+  createHousehold(description: String!, name: String!): CreateHousehold
+  calculateSalary(facilities: [FacilityType], grossSalary: Float, maternityPercent: Float, netPay: Float, netSalary: Float, pensionPercent: Float): CalculateSalary
+  createProperty(coverImage: String, description: String!, isActive: Boolean, name: String!, price: Float!): CreateProperty
+  addPropDetail(amount: Float!, isInflow: Boolean!, propertyId: UUID!, title: String!): AddPropDetail
+  updatePropDetail(amount: Float!, isInflow: Boolean!, propDetailId: UUID!, propertyId: UUID!, title: String!): UpdatePropDetail
+
+  """
+  Login a users with their credentials
+  
+  args:
+  password(str): user's registered password
+  email(str): user's registered email
+  
+  returns:
+  message(str): success messsage confirming login
+  token(str): JWT authorization token used to validate the login
+  rest_token(str): JWT token used to validate REST endpoint access
+  user(obj): 'User' object containing details of the logged in users
+  
+  The refresh token is set as an HttpOnly cookie, never returned in the body.
+  
+  When two-factor authentication is on, no session is issued: the response has
+  mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
+  
+  When the user signed in with an invite's temporary password, no session is issued:
+  the response has password_change_required=True and a password_change_token to send
+  to 'setInitialPassword', after which the client signs in with the new password.
+  """
+  loginUser(email: String, password: String): LoginUser
+
+  """
+  Second login step. 'method' is 'totp', 'email' or 'recovery'.
+  On success it issues the session exactly like 'loginUser'.
+  """
+  verifyMfaLogin(code: String!, method: String!, mfaToken: String!): VerifyMfaLogin
+  resetPassword(email: String, newPassword: String, oldPassword: String): ResetPassword
+
+  """
+  Update the logged-in user's own profile. Only the fields sent are changed.
+  Passwords are changed through 'ResetPassword', which checks the old one.
+  """
+  updateUserProfile(firstName: String, lastName: String, phone: String): UpdateUserProfile
+  logoutUser: LogoutUser
+
+  """
+  Issue a new JWT using the refresh token cookie.
+  The refresh token is rotated: the old one is revoked and a new cookie is set.
+  """
+  refreshToken: RefreshToken
+  sendConfirmationEmail: SendConfirmationEmail
+
+  """
+  This mutation is used to configure user settings like notifications, alert thresholds,
+  default currency and appearance (theme mode and accent colors).
+  """
+  configureUserSettings(budgetAlertThreshold: Int, budgetAlertsEnabled: Boolean, defaultCurrency: String, emailNotifications: Boolean, primaryColor: String, pushNotifications: Boolean, secondaryColor: String, themeMode: String): ConfigureUserSettings
+
+  """
+  Begin adding an authenticator app. Asks for the password again so a stolen
+  session can't attach the attacker's app and lock the owner out.
+  The returned secret only works after 'confirmTotpSetup'.
+  """
+  startTotpSetup(password: String!): StartTotpSetup
+
+  """
+  Turn the authenticator app on with a code from it. 'recoveryCodes' is filled only
+  when this is the account's first 2FA method; show the codes once, they aren't stored.
+  """
+  confirmTotpSetup(code: String!): ConfirmTotpSetup
+
+  """
+  Email a code to the account's address. Send it back with the returned
+  'setupToken' to 'confirmEmailOtpSetup'. No password needed: only the mailbox
+  owner can read the code, so a stolen session can't turn this on by itself.
+  """
+  startEmailOtpSetup: StartEmailOtpSetup
+  resendEmailOtpSetupCode(setupToken: String!): ResendEmailOtpSetupCode
+
+  """
+  Turn email codes on. 'recoveryCodes' is filled only for the account's first 2FA method.
+  """
+  confirmEmailOtpSetup(code: String!, setupToken: String!): ConfirmEmailOtpSetup
+
+  """Choose which method the login screen starts with: 'totp' or 'email'."""
+  setPreferredMfaMethod(method: String!): SetPreferredMfaMethod
+
+  """
+  Public: during login, email a code for the pending challenge. Also used when the
+  user switches from the authenticator app to email. Limited to one send a minute.
+  """
+  resendMfaEmailCode(mfaToken: String!): ResendMfaEmailCode
+
+  """
+  Email a code to confirm turning 2FA off or replacing recovery codes.
+  Without 'actionToken' it starts a new check; with it, it resends the code.
+  """
+  sendMfaActionEmailCode(actionToken: String): SendMfaActionEmailCode
+
+  """
+  Turn two-factor authentication off. Needs the password and a current code
+  ('method' is 'totp', 'email' with 'actionToken', or 'recovery').
+  Other sessions are signed out.
+  """
+  disableMfa(actionToken: String, code: String!, method: String!, password: String!): DisableMfa
+
+  """
+  Replace all recovery codes after checking a current code. Show the new ones once.
+  """
+  regenerateRecoveryCodes(actionToken: String, code: String!, method: String!): RegenerateRecoveryCodes
+
+  """
+  Public: email a password reset code. The response is the same whether or not
+  the email has an account. Call again to resend (at most once a minute).
+  """
+  requestPasswordReset(email: String!): RequestPasswordReset
+
+  """
+  Public: set a new password with the emailed code. Doesn't sign in, and signs out
+  every device, including the one making the request.
+  """
+  resetPasswordWithCode(code: String!, newPassword: String!, resetToken: String!): ResetPasswordWithCode
+
+  """
+  Public: replace an invite's temporary password, with the token from 'loginUser'.
+  Doesn't sign in; sign in again with the new password.
+  """
+  setInitialPassword(newPassword: String!, passwordChangeToken: String!): SetInitialPassword
+
+  """
+  Administrator: create a regular user with their own household and email them an
+  invite with a temporary password. If 'inviteSent' is false, resend the invite.
+  """
+  createUser(input: UserInput!): CreateUser
+
+  """
+  Administrator: change a user's details (only fields sent). A new email signs the
+  user out everywhere; a pending invite is re-sent to it ('inviteSent').
+  """
+  updateUser(id: ID!, input: UserInput!): UpdateUser
+
+  """
+  Administrator: disable (signs out everywhere, keeps data) or re-enable a user.
+  """
+  setUserActive(active: Boolean!, id: ID!): SetUserActive
+
+  """
+  Administrator: email a new temporary password to a user who hasn't signed in yet.
+  """
+  resendUserInvite(id: ID!): ResendUserInvite
+
+  """Mutation to create a store. Inherits from 'CreateEditStore' class"""
+  createStore(actionDate: Date!, amount: Float!, budgetItemId: String, description: String!, householdId: String!, isInflow: Boolean!, isRecurring: Boolean, notes: String, propertyId: String = null, recordType: String!): CreateStore
+
+  """Mutation to update a store. Inherits from 'CreateEditStore' class"""
+  updateStore(actionDate: Date!, amount: Float!, budgetItemId: String, description: String!, householdId: String!, id: String!, isInflow: Boolean!, isRecurring: Boolean, notes: String, propertyId: String = null, recordType: String!): UpdateStore
+  createManyStores(stores: [StoreInputType]): CreateManyStores
+  migrateStoreProperties: MigrateStoreProperties
+  verifyToken(token: String): Verify
+}
+
+"""Mutation to create a budget. Inherits from 'CreateEditBehavior' class"""
+type EvaluateBehavior {
+  message: String
+  behavior: BehaviorType
+}
+
+"""Mutation to create a budget. Inherits from 'CreateEditBudget' class"""
+type CreateBudget {
+  message: String
+  budget: BudgetType
+}
+
+input BudgetItemInputType {
+  name: String
+  amount: Float
+  isRecurring: Boolean
+  uBudgetLineId: String
+  dBudgetLineId: String
+}
+
+"""Mutation to update a budget. Inherits from 'CreateEditBudget' class"""
+type UpdateBudget {
+  message: String
+  budget: BudgetType
+}
+
+type CreateBudgetItems {
+  message: String
+  totalSaved: Int
+  totalNotSaved: Int
+}
+
+type CreateBudgetLine {
+  message: String
+  budgetLine: BudgetLineType
+}
+
+type DeleteBudgetLine {
+  message: String
+}
+
+type EnableBudgetLine {
+  message: String
+}
+
+"""
+Mutation to create a household. Inherits from 'CreateEditHousehold' class
+"""
+type CreateHousehold {
+  message: String
+  household: HouseholdType
+}
+
+type CalculateSalary {
+  message: String
+  salary: SalaryType
+}
+
+input FacilityType {
+  isConstant: Boolean
+  amount: Float
+  percentAmount: Float
+  percentField: String
+}
+
+type CreateProperty {
+  message: MsgSerializer
+  property: PropertyType
+}
+
+scalar MsgSerializer
+
+type AddPropDetail {
+  message: MsgSerializer
+  newDetail: DetailType
+}
+
+type UpdatePropDetail {
+  message: MsgSerializer
+  newDetail: DetailType
+}
+
+"""
+Login a users with their credentials
+
+args:
+password(str): user's registered password
+email(str): user's registered email
+
+returns:
+message(str): success messsage confirming login
+token(str): JWT authorization token used to validate the login
+rest_token(str): JWT token used to validate REST endpoint access
+user(obj): 'User' object containing details of the logged in users
+
+The refresh token is set as an HttpOnly cookie, never returned in the body.
+
+When two-factor authentication is on, no session is issued: the response has
+mfa_required=True and an mfa_token to send to 'verifyMfaLogin' with the code.
+
+When the user signed in with an invite's temporary password, no session is issued:
+the response has password_change_required=True and a password_change_token to send
+to 'setInitialPassword', after which the client signs in with the new password.
+"""
+type LoginUser {
+  message: String
+  token: String
+  restToken: String
+  user: UserType
+  mfaRequired: Boolean!
+  mfaToken: String
+  mfaMethods: [String!]
+  mfaDefaultMethod: String
+  passwordChangeRequired: Boolean!
+  passwordChangeToken: String
+}
+
+"""
+Second login step. 'method' is 'totp', 'email' or 'recovery'.
+On success it issues the session exactly like 'loginUser'.
+"""
+type VerifyMfaLogin {
+  message: String
+  token: String
+  restToken: String
+  user: UserType
+}
+
+type ResetPassword {
+  message: String
+}
+
+"""
+Update the logged-in user's own profile. Only the fields sent are changed.
+Passwords are changed through 'ResetPassword', which checks the old one.
+"""
+type UpdateUserProfile {
+  user: UserType
+  message: String
+}
+
+type LogoutUser {
+  message: String
+}
+
+"""
+Issue a new JWT using the refresh token cookie.
+The refresh token is rotated: the old one is revoked and a new cookie is set.
+"""
+type RefreshToken {
+  token: String
+}
+
+type SendConfirmationEmail {
+  message: String
+  hasError: Boolean
+}
+
+"""
+This mutation is used to configure user settings like notifications, alert thresholds,
+default currency and appearance (theme mode and accent colors).
+"""
+type ConfigureUserSettings {
+  message: String
+}
+
+"""
+Begin adding an authenticator app. Asks for the password again so a stolen
+session can't attach the attacker's app and lock the owner out.
+The returned secret only works after 'confirmTotpSetup'.
+"""
+type StartTotpSetup {
+  setup: TotpSetupType
+}
+
+"""Shown once while adding an authenticator app."""
+type TotpSetupType {
+  secret: String!
+  otpauthUri: String!
+
+  """QR code as an SVG data URI"""
+  qrSvg: String!
+}
+
+"""
+Turn the authenticator app on with a code from it. 'recoveryCodes' is filled only
+when this is the account's first 2FA method; show the codes once, they aren't stored.
+"""
+type ConfirmTotpSetup {
+  message: String
+  recoveryCodes: [String!]!
+  status: MfaStatusType
+}
+
+"""
+Email a code to the account's address. Send it back with the returned
+'setupToken' to 'confirmEmailOtpSetup'. No password needed: only the mailbox
+owner can read the code, so a stolen session can't turn this on by itself.
+"""
+type StartEmailOtpSetup {
+  message: String
+  setupToken: String
+}
+
+type ResendEmailOtpSetupCode {
+  message: String
+}
+
+"""
+Turn email codes on. 'recoveryCodes' is filled only for the account's first 2FA method.
+"""
+type ConfirmEmailOtpSetup {
+  message: String
+  recoveryCodes: [String!]!
+  status: MfaStatusType
+}
+
+"""Choose which method the login screen starts with: 'totp' or 'email'."""
+type SetPreferredMfaMethod {
+  message: String
+  status: MfaStatusType
+}
+
+"""
+Public: during login, email a code for the pending challenge. Also used when the
+user switches from the authenticator app to email. Limited to one send a minute.
+"""
+type ResendMfaEmailCode {
+  message: String
+}
+
+"""
+Email a code to confirm turning 2FA off or replacing recovery codes.
+Without 'actionToken' it starts a new check; with it, it resends the code.
+"""
+type SendMfaActionEmailCode {
+  message: String
+  actionToken: String
+}
+
+"""
+Turn two-factor authentication off. Needs the password and a current code
+('method' is 'totp', 'email' with 'actionToken', or 'recovery').
+Other sessions are signed out.
+"""
+type DisableMfa {
+  message: String
+  status: MfaStatusType
+}
+
+"""
+Replace all recovery codes after checking a current code. Show the new ones once.
+"""
+type RegenerateRecoveryCodes {
+  message: String
+  recoveryCodes: [String!]!
+  status: MfaStatusType
+}
+
+"""
+Public: email a password reset code. The response is the same whether or not
+the email has an account. Call again to resend (at most once a minute).
+"""
+type RequestPasswordReset {
+  message: String
+  resetToken: String
+}
+
+"""
+Public: set a new password with the emailed code. Doesn't sign in, and signs out
+every device, including the one making the request.
+"""
+type ResetPasswordWithCode {
+  message: String
+}
+
+"""
+Public: replace an invite's temporary password, with the token from 'loginUser'.
+Doesn't sign in; sign in again with the new password.
+"""
+type SetInitialPassword {
+  message: String
+}
+
+"""
+Administrator: create a regular user with their own household and email them an
+invite with a temporary password. If 'inviteSent' is false, resend the invite.
+"""
+type CreateUser {
+  message: String
+  user: ManagedUserType
+  inviteSent: Boolean!
+}
+
+input UserInput {
+  firstName: String
+  lastName: String
+  userName: String
+  email: String
+  phone: String
+}
+
+"""
+Administrator: change a user's details (only fields sent). A new email signs the
+user out everywhere; a pending invite is re-sent to it ('inviteSent').
+"""
+type UpdateUser {
+  message: String
+  user: ManagedUserType
+  inviteSent: Boolean
+}
+
+"""
+Administrator: disable (signs out everywhere, keeps data) or re-enable a user.
+"""
+type SetUserActive {
+  message: String
+  user: ManagedUserType
+}
+
+"""
+Administrator: email a new temporary password to a user who hasn't signed in yet.
+"""
+type ResendUserInvite {
+  message: String
+  user: ManagedUserType
+  inviteSent: Boolean!
+}
+
+"""Mutation to create a store. Inherits from 'CreateEditStore' class"""
+type CreateStore {
+  message: String
+  store: StoreType
+}
+
+"""Mutation to update a store. Inherits from 'CreateEditStore' class"""
+type UpdateStore {
+  message: String
+  store: StoreType
+}
+
+type CreateManyStores {
+  message: String
+  totalSaved: Int
+  totalNotSaved: Int
+}
+
+input StoreInputType {
+  amount: Float
+  recordType: String
+  isProperty: Boolean
+  isInflow: Boolean
+  actionDate: Date
+  description: String
+}
+
+type MigrateStoreProperties {
+  message: String
+}
+
+type Verify {
+  payload: GenericScalar!
+}
+
+"""
+The `GenericScalar` scalar type represents a generic
+GraphQL scalar value that could be:
+String, Boolean, Int, Float, List or Object.
+"""
+scalar GenericScalar

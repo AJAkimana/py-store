@@ -116,11 +116,6 @@ WSGI_APPLICATION = 'd2dstore.wsgi.application'
 
 DATABASES = {
 	'default': {
-		# 'ENGINE': 'django.db.backends.mysql',
-		# 'OPTIONS': {
-		#     'read_default_file': os.getenv('MYSQL_CONFIG'),
-		# },
-
 		'ENGINE': 'django.db.backends.postgresql',
 		'NAME': os.getenv("DB_NAME", ''),
 		'USER': os.getenv("DB_USER", ''),
@@ -192,7 +187,7 @@ MFA_ENCRYPTION_KEY = os.getenv('MFA_ENCRYPTION_KEY', '')
 MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', 'D2DStore')
 
 # Used in emails that link to the app, eg: invites
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+FRONTEND_URL = os.getenv('FRONTEND_URL', '').rstrip('/')
 # How long an invited user's temporary password works
 INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', '7'))
 
@@ -204,7 +199,7 @@ AUTHENTICATION_BACKENDS = [
 AUTH_USER_MODEL = 'users.User'
 CORS_ORIGIN_WHITELIST = env_list(
 	'CORS_ORIGINS',
-	['http://localhost:8000', 'http://localhost:3000', 'http://192.168.1.110:8080'] if DEBUG else [FRONTEND_URL],
+	['http://localhost:8000', 'http://localhost:3000'] if DEBUG else [FRONTEND_URL],
 )
 CORS_ALLOW_CREDENTIALS = True
 # Origins allowed to send unsafe requests with a CSRF cookie, eg: the admin login over HTTPS

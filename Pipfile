@@ -5,12 +5,16 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "==3.3.2"
+autopep8 = "==2.3.2"
 
 [scripts]
 start = "python manage.py runserver"
 migrate = "python manage.py migrate"
 collectstatic = "python manage.py collectstatic --noinput"
 createsuperuser = "python manage.py createsuperuser"
+format = "autopep8 --in-place ."
+format-check = "autopep8 --diff --exit-code ."
+graphql-schema = "python manage.py graphql_schema --schema d2dstore.schema.schema --out schema.graphql"
 
 [packages]
 django = "==4.2.17"

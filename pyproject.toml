@@ -1,0 +1,10 @@
+# Formatter settings; matches .editorconfig and .vscode/settings.json
+# Run: pipenv run format        Check (CI): pipenv run format-check
+[tool.autopep8]
+max_line_length = 100
+recursive = true
+exclude = "*/migrations/*,.venv,venv,django_static"
+# The code base is indented with tabs (see .editorconfig), so leave indentation rules alone:
+# W191 tabs, E101 mixed indentation, E11x/E12x/E13x indent width and continuation lines.
+# E501 too: autopep8 wraps long lines with spaces, which mixes tabs and spaces.
+ignore = "W191,E101,E111,E114,E115,E116,E117,E12,E13,E501,W503,W504"

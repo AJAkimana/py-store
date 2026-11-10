@@ -1,12 +1,7 @@
 from django.conf import settings
-from django.shortcuts import render
 from graphene_django.views import GraphQLView
 from graphql import ExecutionResult, GraphQLError, parse, validate
 from graphql.validation import ValidationRule
-
-
-def index(request):
-	return render(request, "build/index.html")
 
 
 class DisableIntrospection(ValidationRule):

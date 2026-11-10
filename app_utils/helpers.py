@@ -21,7 +21,7 @@ PAGINATION_DEFAULT = {
 }
 
 
-## JWT payload for Hasura
+# JWT payload for Hasura
 # def jwt_payload(user, context=None):
 #   jwt_datetime = datetime.utcnow() + jwt_settings.JWT_EXPIRATION_DELTA
 #   jwt_expires = int(jwt_datetime.timestamp())

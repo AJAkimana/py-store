@@ -45,5 +45,3 @@ class BehaviorScoreAdmin(BaseModelAdmin):
 		}),
 	)
 	search_fields = ['score']
-
-

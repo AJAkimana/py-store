@@ -30,4 +30,3 @@ class CurrencyChangeForm(BaseUserChangeForm):
 		model = Currency
 		fields = ['name', 'code', 'symbol', 'minor_unit', 'is_active']
 		error_class = 'error'
-

@@ -2,7 +2,7 @@ import graphene
 from django.db.models import Q
 from apps.properties.models import Property
 from apps.users.models import User
-from app_utils.model_types.property import PropPaginatorType,\
+from app_utils.model_types.property import PropPaginatorType, \
 	PropertyDetailType
 from app_utils.helpers import PAGINATION_DEFAULT, paginate_data, properties_active
 from graphql_jwt.decorators import login_required

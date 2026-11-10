@@ -122,7 +122,7 @@ class CreateBudgetLine(graphene.Mutation):
         is_system = graphene.Boolean(required=False)
 
     @login_required
-    def mutate(self, info, is_system,  **kwargs):
+    def mutate(self, info, is_system, **kwargs):
         user = info.context.user
         if is_system and not user.is_superuser:
             raise PermissionDenied()

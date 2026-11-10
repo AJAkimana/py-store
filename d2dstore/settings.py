@@ -96,7 +96,7 @@ ROOT_URLCONF = 'd2dstore.urls'
 TEMPLATES = [
 	{
 		'BACKEND': 'django.template.backends.django.DjangoTemplates',
-		'DIRS': [os.path.join(BASE_DIR, 'frontend')],
+		'DIRS': [],
 		'APP_DIRS': True,
 		'OPTIONS': {
 			'context_processors': [
@@ -220,13 +220,16 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Set up to The URL to api
-# USE_X_FORWARDED_HOST = True
-# FORCE_SCRIPT_NAME = '/api'
+# URL prefix the app is mounted under. In production nginx serves the backend at /server and
+# strips that prefix before proxying, so FORCE_SCRIPT_NAME=/server makes Django add it back to
+# the URLs it builds (admin links, redirects, static files). Empty in development.
+# Not named SCRIPT_NAME: gunicorn reads that variable itself and rejects the stripped paths.
+FORCE_SCRIPT_NAME = os.getenv('FORCE_SCRIPT_NAME', '').rstrip('/') or None
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR, 'django_static/')
+# Relative, so Django prefixes it with SCRIPT_NAME: /server/django_static/ in production
 STATIC_URL = 'django_static/'
 
 # smtp settings

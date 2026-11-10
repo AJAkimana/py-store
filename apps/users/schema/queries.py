@@ -1,5 +1,5 @@
 import graphene
-from graphql_jwt.decorators import login_required,\
+from graphql_jwt.decorators import login_required, \
 	superuser_required
 from django.db.models import Q
 from app_utils.model_types.user import UserType, \

@@ -54,5 +54,3 @@ class HouseholdMemberAdmin(BaseModelAdmin):
 		}),
 	)
 	search_fields = ['user', 'household', 'access_level']
-
-

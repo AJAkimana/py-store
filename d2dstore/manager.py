@@ -6,6 +6,7 @@ class BaseQuerySet(models.QuerySet):
     """
     Custom queryset for BaseModel
     """
+
     def delete(self):
         return super().update(deleted_at=timezone.now())
 

@@ -13,18 +13,9 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-# from django.contrib import admin
-from django.urls import path, include, re_path
-# from django.views.decorators.csrf import csrf_exempt
-# from graphene_django.views import GraphQLView
-#
-# from api.urls import core_schema_view
-# from d2dstore.views import index
+from django.urls import path, include
 
+# In production nginx serves these under /server (see FORCE_SCRIPT_NAME in settings.py)
 urlpatterns = [
 	path('api/', include('api.urls')),
-	# path('admin/', admin.site.urls),
-	# path('d2dstore/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
-	# path('d2dstore/schema/', core_schema_view),
-	# re_path(r'^(?:.*)/?$', index, name='index'),
 ]

@@ -86,7 +86,7 @@ jobs:
             SERVICE_NAME="${SERVICE_NAME:-gunicorn.service}"
 
             if [ ! -d "$REPO_DIR/.git" ]; then
-              echo "Missing git repository at $REPO_DIR"
+              echo "Missing the git repository at $REPO_DIR"
               exit 1
             fi
 

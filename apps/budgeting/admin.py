@@ -45,5 +45,3 @@ class BudgetItemAdmin(BaseModelAdmin):
 		}),
 	)
 	search_fields = ['name']
-
-

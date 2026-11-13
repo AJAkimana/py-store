@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -23,6 +24,19 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 dotenv_path = os.path.join(BASE_DIR, 'app.env')
 load_dotenv(dotenv_path)
 
+
+def env_bool(name, default):
+	"""Read a 'true'/'false' env var, falling back to `default` when unset or empty"""
+	value = os.getenv(name, '').strip().lower()
+	return default if value == '' else value == 'true'
+
+
+def env_list(name, default):
+	"""Read a comma separated env var, falling back to `default` when unset or empty"""
+	value = os.getenv(name, '').strip()
+	return [item.strip() for item in value.split(',') if item.strip()] if value else default
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
@@ -32,7 +46,11 @@ SECRET_KEY = os.getenv("SECRET", '')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(os.getenv('DEBUG', '') == 'true')
 
-ALLOWED_HOSTS = ['.akimanaja.com', '165.227.5.239', 'localhost', '192.168.1.130', '192.168.1.110']
+# Production accepts only the real domain unless ALLOWED_HOSTS says otherwise
+ALLOWED_HOSTS = env_list(
+	'ALLOWED_HOSTS',
+	['localhost', '127.0.0.1'] if DEBUG else ['.akimanaja.com'],
+)
 
 # Application definition
 
@@ -57,6 +75,7 @@ INSTALLED_APPS = [
 	'apps.behavior_ip',
 	'dbbackup',  # django-dbbackup
 	'graphene_django',
+	'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
 	'django_crontab'  # For automatic job
 ]
 
@@ -77,7 +96,7 @@ ROOT_URLCONF = 'd2dstore.urls'
 TEMPLATES = [
 	{
 		'BACKEND': 'django.template.backends.django.DjangoTemplates',
-		'DIRS': [os.path.join(BASE_DIR, 'frontend')],
+		'DIRS': [],
 		'APP_DIRS': True,
 		'OPTIONS': {
 			'context_processors': [
@@ -97,11 +116,6 @@ WSGI_APPLICATION = 'd2dstore.wsgi.application'
 
 DATABASES = {
 	'default': {
-		# 'ENGINE': 'django.db.backends.mysql',
-		# 'OPTIONS': {
-		#     'read_default_file': os.getenv('MYSQL_CONFIG'),
-		# },
-
 		'ENGINE': 'django.db.backends.postgresql',
 		'NAME': os.getenv("DB_NAME", ''),
 		'USER': os.getenv("DB_USER", ''),
@@ -132,9 +146,9 @@ AUTH_PASSWORD_VALIDATORS = [
 GRAPHENE = {
 	'SCHEMA': 'd2dstore.schema.schema',
 	"SCHEMA_INDENT": 2,
-	"MIDDLEWARE": (
-		"graphql_jwt.middleware.JSONWebTokenMiddleware",
-		"graphene_django.debug.DjangoDebugMiddleware"
+	# The debug middleware returns raw SQL and exception details, so it only runs in development
+	"MIDDLEWARE": ("graphql_jwt.middleware.JSONWebTokenMiddleware",) + (
+		("graphene_django.debug.DjangoDebugMiddleware",) if DEBUG else ()
 	),
 }
 REST_FRAMEWORK = {
@@ -148,20 +162,51 @@ REST_FRAMEWORK = {
 	],
 	'DEFAULT_PARSER_CLASSES': (
 		'rest_framework.parsers.JSONParser',
-	)
+	),
+	# DRF falls back to AllowAny when this is not set
+	'DEFAULT_PERMISSION_CLASSES': [
+		'rest_framework.permissions.IsAuthenticated',
+	],
 }
 GRAPHQL_JWT = {
-	'JWT_ALLOW_ANY_HANDLER': 'app_utils.helpers.jwt_allow_allow_any'
+	'JWT_ALLOW_ANY_HANDLER': 'app_utils.helpers.jwt_allow_allow_any',
+	'JWT_VERIFY_EXPIRATION': True,
+	'JWT_EXPIRATION_DELTA': timedelta(minutes=15),
+	'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
+	'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
+	# Refresh token lives only in an HttpOnly cookie, never in the response body
+	'JWT_REFRESH_TOKEN_COOKIE_NAME': 'refresh-token',
+	'JWT_COOKIE_SECURE': env_bool('JWT_C_SECURE', not DEBUG),
+	'JWT_COOKIE_SAMESITE': os.getenv('JWT_C_SAMESITE', 'Lax'),
 }
+# Two-factor authentication
+# Fernet key used to encrypt TOTP secrets at rest. Generate one with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Required when DEBUG is off; in development a key is derived from SECRET_KEY.
+MFA_ENCRYPTION_KEY = os.getenv('MFA_ENCRYPTION_KEY', '')
+MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', 'D2DStore')
+
+# Used in emails that link to the app, eg: invites
+FRONTEND_URL = os.getenv('FRONTEND_URL', '').rstrip('/')
+# How long an invited user's temporary password works
+INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', '7'))
+
 AUTHENTICATION_BACKENDS = [
-	'graphql_jwt.backends.JSONWebTokenBackend',
+	# graphql_jwt's backend, plus rejecting tokens issued before a password reset
+	'apps.users.backends.SessionAwareJSONWebTokenBackend',
 	'django.contrib.auth.backends.ModelBackend',
 ]
 AUTH_USER_MODEL = 'users.User'
-CORS_ORIGIN_WHITELIST = (
-	'http://localhost:8000',
-	'http://localhost:3000',
-	'http://192.168.1.110:8080'
+CORS_ORIGIN_WHITELIST = env_list(
+	'CORS_ORIGINS',
+	['http://localhost:8000', 'http://localhost:3000'] if DEBUG else [FRONTEND_URL],
+)
+CORS_ALLOW_CREDENTIALS = True
+# Origins allowed to send unsafe requests with a CSRF cookie, eg: the admin login over HTTPS
+CSRF_TRUSTED_ORIGINS = env_list(
+	'CSRF_TRUSTED_ORIGINS',
+	['http://localhost:8000', 'http://localhost:3000'] if DEBUG
+	else ['https://akimanaja.com', 'https://*.akimanaja.com'],
 )
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -175,13 +220,16 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Set up to The URL to api
-# USE_X_FORWARDED_HOST = True
-# FORCE_SCRIPT_NAME = '/api'
+# URL prefix the app is mounted under. In production nginx serves the backend at /server and
+# strips that prefix before proxying, so FORCE_SCRIPT_NAME=/server makes Django add it back to
+# the URLs it builds (admin links, redirects, static files). Empty in development.
+# Not named SCRIPT_NAME: gunicorn reads that variable itself and rejects the stripped paths.
+FORCE_SCRIPT_NAME = os.getenv('FORCE_SCRIPT_NAME', '').rstrip('/') or None
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR, 'django_static/')
+# Relative, so Django prefixes it with SCRIPT_NAME: /server/django_static/ in production
 STATIC_URL = 'django_static/'
 
 # smtp settings
@@ -210,12 +258,16 @@ CRONJOBS = [
 	('0 21 * * *', 'app_utils.background_task.send_monthly_summary'),
 ]
 
-SECURE_HSTS_SECONDS = os.getenv('SH_SECONDS', 3600)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = bool(os.getenv('SHI_SUB_DOM', '') == 'true')
-SECURE_CONTENT_TYPE_NOSNIFF = bool(os.getenv('SCT_NOSNIFF', '') == 'true')
-SECURE_BROWSER_XSS_FILTER = bool(os.getenv('SBX_FILTER', '') == 'true')
-SECURE_SSL_REDIRECT = bool(os.getenv('S_SSL_REDIRECT', '') == 'true')
-SESSION_COOKIE_SECURE = bool(os.getenv('S_C_SECURE', '') == 'true')
-CSRF_COOKIE_SECURE = bool(os.getenv('CSRF_C_SECURE', '') == 'true')
-X_FRAME_OPTIONS = os.getenv('X_FRAME', 'DENY')
-SECURE_HSTS_PRELOAD = bool(os.getenv('SH_PRELOAD', '') == 'true')
+# Security headers and cookies default to secure when DEBUG is off; an explicit env value still wins.
+# nginx terminates TLS, so trust its X-Forwarded-Proto header to know a request was HTTPS.
+# nginx must set: proxy_set_header X-Forwarded-Proto $scheme;
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_HSTS_SECONDS = int(os.getenv('SH_SECONDS') or (0 if DEBUG else 3600))
+# These two affect every subdomain and are hard to undo, so they stay opt-in
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SHI_SUB_DOM', False)
+SECURE_HSTS_PRELOAD = env_bool('SH_PRELOAD', False)
+SECURE_CONTENT_TYPE_NOSNIFF = env_bool('SCT_NOSNIFF', True)
+SECURE_SSL_REDIRECT = env_bool('S_SSL_REDIRECT', not DEBUG)
+SESSION_COOKIE_SECURE = env_bool('S_C_SECURE', not DEBUG)
+CSRF_COOKIE_SECURE = env_bool('CSRF_C_SECURE', not DEBUG)
+X_FRAME_OPTIONS = os.getenv('X_FRAME') or 'DENY'

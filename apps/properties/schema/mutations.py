@@ -52,7 +52,7 @@ class AddPropDetail(graphene.Mutation):
 
 	@login_required
 	def mutate(self, info, property_id, **kwargs):
-		the_property = get_model_object(Property, 'id', property_id)
+		the_property = get_model_object(Property, 'id', property_id, manager_query=info.context.user.properties)
 
 		kwargs['type'] = 'in' if kwargs['is_inflow'] else 'out'
 		serializer = PropDetailSerializer(data=kwargs)
@@ -79,8 +79,9 @@ class UpdatePropDetail(graphene.Mutation):
 
 	@login_required
 	def mutate(self, info, prop_detail_id, **kwargs):
-		the_property = get_model_object(Property, 'id', kwargs["property_id"])
-		the_detail = get_model_object(PropDetail, 'id', prop_detail_id)
+		the_property = get_model_object(
+			Property, 'id', kwargs["property_id"], manager_query=info.context.user.properties)
+		the_detail = get_model_object(PropDetail, 'id', prop_detail_id, manager_query=the_property.prop_details)
 
 		kwargs['type'] = 'in' if kwargs['is_inflow'] else 'out'
 		serializer = PropDetailSerializer(the_detail, data=kwargs)

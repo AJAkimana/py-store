@@ -26,5 +26,3 @@ class StoreAdmin(BaseModelAdmin):
 		}),
 	)
 	search_fields = ['amount', 'description']
-
-

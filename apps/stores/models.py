@@ -19,6 +19,7 @@ class Store(BaseModel):
 	is_property = models.BooleanField(default=False)
 	is_inflow = models.BooleanField(default=False)
 	description = models.CharField(max_length=200, default='*Home expense')
+	notes = models.TextField(blank=True, default='')
 	action_date = models.DateField(blank=False, null=False, default=now)
 	user = models.ForeignKey(
 		User, related_name='stores', on_delete=models.PROTECT)

@@ -105,4 +105,4 @@ jobs:
             .venv/bin/python manage.py collectstatic --noinput
 
             sudo systemctl restart "$SERVICE_NAME"
-            echo "Deployed $(git rev-parse --short HEAD)"
+            echo "Deployed successfully $(git rev-parse --short HEAD)"

@@ -36,6 +36,7 @@ def env_list(name, default):
 	value = os.getenv(name, '').strip()
 	return [item.strip() for item in value.split(',') if item.strip()] if value else default
 
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET", '')
 

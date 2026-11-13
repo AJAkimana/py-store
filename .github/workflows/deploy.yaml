@@ -99,7 +99,7 @@ jobs:
             .venv/bin/pip install --upgrade pip
             .venv/bin/pip install -r requirements.txt
 
-            set -a; source .env; set +a
+            set -a; source app.env; set +a
 
             .venv/bin/python manage.py migrate --noinput
             .venv/bin/python manage.py collectstatic --noinput

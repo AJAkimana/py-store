@@ -10,6 +10,7 @@ autopep8 = "==2.3.2"
 [scripts]
 start = "python manage.py runserver"
 migrate = "python manage.py migrate"
+manage = "python manage.py"
 collectstatic = "python manage.py collectstatic --noinput"
 createsuperuser = "python manage.py createsuperuser"
 format = "autopep8 --in-place ."

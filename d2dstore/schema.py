@@ -5,8 +5,8 @@ from graphene_django.debug import DjangoDebug
 
 from apps.behavior_ip.schema.mutations import BehaviorMutations
 from apps.behavior_ip.schema.queries import BehaviorQuery
-from apps.budgeting.schema.mutations import BudgetMutations
-from apps.budgeting.schema.queries import BudgetingQuery
+from apps.budgets.schema.mutations import BudgetMutations
+from apps.budgets.schema.queries import BudgetQuery
 from apps.households.schema.mutations import HouseholdMutations
 from apps.households.schema.queries import HouseholdQuery
 from apps.manage_system.schema.mutations import ManageSystemMutations
@@ -25,7 +25,7 @@ class AppQuery(
 	PropertyQuery,
 	ManageSystemQuery,
 	HouseholdQuery,
-	BudgetingQuery,
+	BudgetQuery,
 	BehaviorQuery,
 	graphene.ObjectType
 ):

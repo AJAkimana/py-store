@@ -142,3 +142,37 @@ def validate_item_usable(owner: BudgetOwner, item_id) -> None:
 	"""Raise unless the item is one the owner may use (own or enabled system item)."""
 	if not owner.usable_items().filter(id=item_id).exists():
 		raise GraphQLError('Invalid budget item')
+
+
+def set_allocations(budget: Budget, allocations) -> None:
+	"""Replace a budget's allocations with `allocations` = [(item_id, Decimal amount)].
+
+	Items already allocated keep their row (amount updated); others are added or removed.
+	"""
+	ensure_editable(budget)
+	owner = owner_of(budget)
+	wanted = {}
+	for item_id, amount in allocations:
+		key = str(item_id)
+		if key in wanted:
+			raise GraphQLError('Each item can only appear once in a budget')
+		wanted[key] = amount
+	existing = {str(a.item_id): a for a in BudgetAllocation.objects.filter(budget=budget)}
+	new_ids = set(wanted) - set(existing)
+	if new_ids:
+		usable = {str(i) for i in owner.usable_items().filter(id__in=new_ids).values_list('id', flat=True)}
+		if usable != new_ids:
+			raise GraphQLError('Invalid budget item')
+	if budget.status == BudgetStatus.ACTIVE and not wanted:
+		raise GraphQLError("An active budget needs at least one item")
+
+	BudgetAllocation.objects.filter(budget=budget).exclude(
+		item_id__in=list(wanted)).hard_delete()
+	for key, amount in wanted.items():
+		if key in existing:
+			allocation = existing[key]
+			if allocation.amount != amount:
+				allocation.amount = amount
+				allocation.save(update_fields=['amount'])
+		else:
+			BudgetAllocation.objects.create(budget=budget, item_id=key, amount=amount)

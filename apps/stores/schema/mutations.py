@@ -19,7 +19,7 @@ class CreateEditStore(graphene.Mutation):
 		amount = graphene.Float(required=True)
 		record_type = graphene.String(required=True)
 		property_id = graphene.String(required=False, default_value=None)
-		budget_item_id = graphene.String(required=False)
+		item_id = graphene.String(required=False, description='Budget item this expense is for')
 		is_inflow = graphene.Boolean(required=True)
 		action_date = graphene.Date(required=True)
 		description = graphene.String(required=True)

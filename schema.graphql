@@ -5,11 +5,34 @@ schema {
 
 type AppQuery {
   behaviorsList(searchKey: String): BehaviorPaginatorType
-  budgets(searchKey: String, searchStartDate: String, searchEndDate: String, pageCount: Int, pageNumber: Int, searchMember: String): BudgetPaginatorType
-  currentBudget(budgetId: String): BudgetDetailType
-  defaultBudgetLines: [DefaultBudgetLineType]
-  userBudgetLines(active: Boolean): [UserBudgetLineType]
-  allBudgetLines(isGlobalSetup: Boolean, isAppSetup: Boolean): [BudgetLineType]
+
+  """Items the owner can budget for and tag transactions with."""
+  budgetItems(
+    householdId: ID
+
+    """
+    Settings view: also list archived own items and every system item, with `enabled` showing whether the owner switched it on.
+    """
+    includeDisabled: Boolean = false
+  ): [BudgetItemType!]!
+
+  """Admin: every system item, including inactive ones."""
+  systemBudgetItems: [BudgetItemType!]!
+  budgets(
+    householdId: ID
+    searchKey: String
+    status: String
+
+    """Budgets whose period overlaps date_from..date_to"""
+    dateFrom: Date
+    dateTo: Date
+    pageCount: Int = 10
+    pageNumber: Int = 1
+  ): BudgetPaginatorType
+  budget(id: ID!, householdId: ID): BudgetType
+
+  """The active budget covering a date (today by default), if any."""
+  activeBudget(householdId: ID, date: Date): BudgetType
   myHouseholdMemberships: [HouseholdMemberType]
   households: [HouseholdType]
   dbBackup: DbBackupType
@@ -17,7 +40,20 @@ type AppQuery {
   rateCurrencies(amount: Float, base: String, targets: [String], period: String): [ConvertedCurrencyType]
   properties(search: String, isActive: String, pageCount: Int, pageNumber: Int): PropPaginatorType
   propertiesDetail(isActive: String): PropertyDetailType
-  stores(searchKey: String, searchDateFrom: String, searchDateTo: String, searchType: String, pageCount: Int, pageNumber: Int, storeType: String, searchMember: String, transactionType: String, budgetLineId: String): StorePaginatorType
+  stores(
+    searchKey: String
+    searchDateFrom: String
+    searchDateTo: String
+    searchType: String
+    pageCount: Int
+    pageNumber: Int
+    storeType: String
+    searchMember: String
+    transactionType: String
+
+    """Only expenses tagged with this budget item"""
+    itemId: String
+  ): StorePaginatorType
   store(id: String!): StoreType
   totalInflow(storeType: String): Int
   totalOutflow(storeType: String): Int
@@ -96,9 +132,6 @@ type UserType {
   settings: UserSettingsType
   creator: [HouseholdType!]!
   householdSet: [HouseholdType!]!
-  userBudgetLines: [UserBudgetLineType!]!
-  budgets: [BudgetType!]!
-  userBudgetItems: [BudgetItemType!]!
   properties: [PropertyType!]!
   stores: [StoreType!]!
   recurringStores: [RecurringStoreType!]!
@@ -174,123 +207,10 @@ type HouseholdType {
   description: String!
   createdBy: UserType
   members: [UserType!]!
-  budgets: [BudgetType!]!
   properties: [PropertyType!]!
   stores: [StoreType!]!
   family: [HouseholdMemberType!]!
   behaviors: [BehaviorType!]!
-}
-
-type BudgetType {
-  id: UUID!
-  createdAt: DateTime
-  updatedAt: DateTime
-  deletedAt: DateTime
-  name: String!
-  description: String
-  status: BudgetingBudgetStatusChoices!
-  startDate: Date!
-  endDate: Date!
-  user: UserType
-  household: HouseholdType
-  budgetItems: [BudgetItemType!]!
-  amount: Float
-  amountSpent: Float
-}
-
-"""An enumeration."""
-enum BudgetingBudgetStatusChoices {
-  """Draft"""
-  DRAFT
-
-  """Pending"""
-  PENDING
-
-  """Approved"""
-  APPROVED
-}
-
-"""
-The `Date` scalar type represents a Date
-value as specified by
-[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
-"""
-scalar Date
-
-type BudgetItemType {
-  id: UUID!
-  createdAt: DateTime
-  updatedAt: DateTime
-  deletedAt: DateTime
-  name: String!
-  amount: Float!
-  budget: BudgetType
-  isRecurring: Boolean!
-  user: UserType
-  uBudgetLine: UserBudgetLineType
-  dBudgetLine: DefaultBudgetLineType
-  stores: [StoreType!]!
-  amountSpent: Float
-}
-
-type UserBudgetLineType {
-  id: UUID!
-  createdAt: DateTime
-  updatedAt: DateTime
-  deletedAt: DateTime
-  name: String!
-  description: String!
-  active: Boolean!
-  enabled: Boolean!
-  amount: Decimal!
-  user: UserType!
-  uBudgetItems: [BudgetItemType!]!
-}
-
-"""The `Decimal` scalar type represents a python Decimal."""
-scalar Decimal
-
-type DefaultBudgetLineType {
-  id: UUID!
-  createdAt: DateTime
-  updatedAt: DateTime
-  deletedAt: DateTime
-  name: String!
-  description: String!
-  active: Boolean!
-  enabled: Boolean!
-  dBudgetItems: [BudgetItemType!]!
-}
-
-type StoreType {
-  id: UUID!
-  createdAt: DateTime
-  updatedAt: DateTime
-  deletedAt: DateTime
-  amount: Float!
-  recordType: StoresStoreRecordTypeChoices!
-  isProperty: Boolean!
-  isInflow: Boolean!
-  description: String!
-  notes: String!
-  actionDate: Date!
-  user: UserType!
-  property: PropertyType
-  household: HouseholdType
-  budgetItem: BudgetItemType
-  isRecurring: Boolean
-}
-
-"""An enumeration."""
-enum StoresStoreRecordTypeChoices {
-  """Store"""
-  USE
-
-  """Debt"""
-  DEBT
-
-  """Online"""
-  ONLINE
 }
 
 type PropertyType {
@@ -332,6 +252,62 @@ enum PropertiesPropDetailTypeChoices {
   OUT
 }
 
+type StoreType {
+  id: UUID!
+  createdAt: DateTime
+  updatedAt: DateTime
+  deletedAt: DateTime
+  amount: Float!
+  recordType: StoresStoreRecordTypeChoices!
+  isProperty: Boolean!
+  isInflow: Boolean!
+  description: String!
+  notes: String!
+  actionDate: Date!
+  user: UserType!
+  property: PropertyType
+  household: HouseholdType
+
+  """The budget item this expense is for"""
+  item: BudgetItemType
+  isRecurring: Boolean
+}
+
+"""An enumeration."""
+enum StoresStoreRecordTypeChoices {
+  """Store"""
+  USE
+
+  """Debt"""
+  DEBT
+
+  """Online"""
+  ONLINE
+}
+
+"""
+The `Date` scalar type represents a Date
+value as specified by
+[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+"""
+scalar Date
+
+type BudgetItemType {
+  id: ID!
+  name: String!
+  description: String
+  defaultAmount: Float
+  isActive: Boolean
+
+  """Managed by admins; users enable it for their account."""
+  isSystem: Boolean
+
+  """
+  Whether the owner can use it: their own active items, or system items they enabled.
+  """
+  enabled: Boolean
+}
+
 type HouseholdMemberType {
   id: UUID!
   createdAt: DateTime
@@ -366,28 +342,38 @@ type RecurringStoreType {
 type BudgetPaginatorType {
   numPages: Int
   totalCount: Int
-  pageData: [BudgetType]
+  pageData: [BudgetType!]
 }
 
-type BudgetDetailType {
-  id: String
-  name: String
-  amount: Float
-  amountSpent: Float
+type BudgetType {
+  id: ID!
+  name: String!
   description: String
   startDate: Date
   endDate: Date
+
+  """draft | active | closed"""
   status: String
-  budgetItems: [BudgetItemType]
+  isHousehold: Boolean
+
+  """Total planned across items"""
+  allocated: Float
+
+  """Expenses on planned items within the period"""
+  spent: Float
+  remaining: Float
+
+  """Expenses within the period on items not in this budget, or untagged"""
+  unbudgeted: Float
+  allocations: [BudgetAllocationType!]!
 }
 
-type BudgetLineType {
-  id: String!
-  name: String
-  description: String
+type BudgetAllocationType {
+  id: ID!
+  item: BudgetItemType!
   amount: Float
-  isSystem: Boolean
-  enabled: Boolean
+  spent: Float
+  remaining: Float
 }
 
 type DbBackupType {
@@ -581,15 +567,42 @@ type AppMutations {
   """Mutation to create a budget. Inherits from 'CreateEditBehavior' class"""
   evaluateBehavior(actionDate: Date!, description: String, householdId: String, name: String!, rate: String): EvaluateBehavior
 
-  """Mutation to create a budget. Inherits from 'CreateEditBudget' class"""
-  createBudget(description: String, endDate: Date!, householdId: String!, items: [BudgetItemInputType], name: String!, startDate: Date!, status: String): CreateBudget
+  """
+  Create an item for the owner, or a system item (admins, `isSystem: true`).
+  Re-creating an archived item with the same name brings it back.
+  """
+  createBudgetItem(defaultAmount: Float, description: String, householdId: ID, isSystem: Boolean = false, name: String!): CreateBudgetItem
+  updateBudgetItem(defaultAmount: Float, description: String, householdId: ID, id: ID!, isActive: Boolean, name: String): UpdateBudgetItem
 
-  """Mutation to update a budget. Inherits from 'CreateEditBudget' class"""
-  updateBudget(description: String, endDate: Date, householdId: String, id: String!, items: [BudgetItemInputType], name: String, startDate: Date, status: String): UpdateBudget
-  createBudgetItems(budgetId: String, items: [BudgetItemInputType]): CreateBudgetItems
-  createBudgetLine(active: Boolean, amount: Float, description: String, isSystem: Boolean, name: String!): CreateBudgetLine
-  deleteBudgetLine(id: String!, isSystem: Boolean!): DeleteBudgetLine
-  enableBudgetLine(id: String!, isGlobalSetup: Boolean, isSystem: Boolean!): EnableBudgetLine
+  """
+  Delete an item. Items already used in budgets or transactions are archived instead,
+  so history keeps its labels.
+  """
+  deleteBudgetItem(householdId: ID, id: ID!): DeleteBudgetItem
+
+  """Switch a system item on or off for the owner's account."""
+  setSystemItemEnabled(enabled: Boolean!, householdId: ID, itemId: ID!): SetSystemItemEnabled
+
+  """
+  Create a budget for any period. It starts as a draft unless `status: "active"`.
+  """
+  createBudget(allocations: [AllocationInput!], description: String, endDate: Date!, householdId: ID, name: String!, startDate: Date!, status: String = "draft"): CreateBudget
+
+  """Update a budget's details. Closed budgets must be reopened first."""
+  updateBudget(description: String, endDate: Date, householdId: ID, id: ID!, name: String, startDate: Date): UpdateBudget
+
+  """Replace the items and amounts a budget plans for."""
+  setBudgetAllocations(allocations: [AllocationInput!]!, budgetId: ID!, householdId: ID): SetBudgetAllocations
+
+  """draft → active → closed. Active budgets of one owner can't overlap."""
+  setBudgetStatus(householdId: ID, id: ID!, status: String!): SetBudgetStatus
+
+  """
+  Start a new draft budget for another period with the same items and amounts.
+  Items the owner can no longer use are left out.
+  """
+  copyBudget(endDate: Date!, householdId: ID, id: ID!, name: String!, startDate: Date!): CopyBudget
+  deleteBudget(householdId: ID, id: ID!): DeleteBudget
 
   """
   Mutation to create a household. Inherits from 'CreateEditHousehold' class
@@ -745,10 +758,37 @@ type AppMutations {
   resendUserInvite(id: ID!): ResendUserInvite
 
   """Mutation to create a store. Inherits from 'CreateEditStore' class"""
-  createStore(actionDate: Date!, amount: Float!, budgetItemId: String, description: String!, householdId: String!, isInflow: Boolean!, isRecurring: Boolean, notes: String, propertyId: String = null, recordType: String!): CreateStore
+  createStore(
+    actionDate: Date!
+    amount: Float!
+    description: String!
+    householdId: String!
+    isInflow: Boolean!
+    isRecurring: Boolean
+
+    """Budget item this expense is for"""
+    itemId: String
+    notes: String
+    propertyId: String = null
+    recordType: String!
+  ): CreateStore
 
   """Mutation to update a store. Inherits from 'CreateEditStore' class"""
-  updateStore(actionDate: Date!, amount: Float!, budgetItemId: String, description: String!, householdId: String!, id: String!, isInflow: Boolean!, isRecurring: Boolean, notes: String, propertyId: String = null, recordType: String!): UpdateStore
+  updateStore(
+    actionDate: Date!
+    amount: Float!
+    description: String!
+    householdId: String!
+    id: String!
+    isInflow: Boolean!
+    isRecurring: Boolean
+
+    """Budget item this expense is for"""
+    itemId: String
+    notes: String
+    propertyId: String = null
+    recordType: String!
+  ): UpdateStore
   createManyStores(stores: [StoreInputType]): CreateManyStores
   migrateStoreProperties: MigrateStoreProperties
   verifyToken(token: String): Verify
@@ -760,42 +800,76 @@ type EvaluateBehavior {
   behavior: BehaviorType
 }
 
-"""Mutation to create a budget. Inherits from 'CreateEditBudget' class"""
+"""
+Create an item for the owner, or a system item (admins, `isSystem: true`).
+Re-creating an archived item with the same name brings it back.
+"""
+type CreateBudgetItem {
+  message: String
+  item: BudgetItemType
+}
+
+type UpdateBudgetItem {
+  message: String
+  item: BudgetItemType
+}
+
+"""
+Delete an item. Items already used in budgets or transactions are archived instead,
+so history keeps its labels.
+"""
+type DeleteBudgetItem {
+  message: String
+  archived: Boolean
+}
+
+"""Switch a system item on or off for the owner's account."""
+type SetSystemItemEnabled {
+  message: String
+  item: BudgetItemType
+}
+
+"""
+Create a budget for any period. It starts as a draft unless `status: "active"`.
+"""
 type CreateBudget {
   message: String
   budget: BudgetType
 }
 
-input BudgetItemInputType {
-  name: String
-  amount: Float
-  isRecurring: Boolean
-  uBudgetLineId: String
-  dBudgetLineId: String
+input AllocationInput {
+  itemId: ID!
+  amount: Float!
 }
 
-"""Mutation to update a budget. Inherits from 'CreateEditBudget' class"""
+"""Update a budget's details. Closed budgets must be reopened first."""
 type UpdateBudget {
   message: String
   budget: BudgetType
 }
 
-type CreateBudgetItems {
+"""Replace the items and amounts a budget plans for."""
+type SetBudgetAllocations {
   message: String
-  totalSaved: Int
-  totalNotSaved: Int
+  budget: BudgetType
 }
 
-type CreateBudgetLine {
+"""draft → active → closed. Active budgets of one owner can't overlap."""
+type SetBudgetStatus {
   message: String
-  budgetLine: BudgetLineType
+  budget: BudgetType
 }
 
-type DeleteBudgetLine {
+"""
+Start a new draft budget for another period with the same items and amounts.
+Items the owner can no longer use are left out.
+"""
+type CopyBudget {
   message: String
+  budget: BudgetType
 }
 
-type EnableBudgetLine {
+type DeleteBudget {
   message: String
 }
 

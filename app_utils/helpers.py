@@ -149,7 +149,7 @@ def get_stores_filter(**filters):
 	search_date_from = filters.get('search_date_from', '')
 	search_date_to = filters.get('search_date_to', '')
 	transaction_type = filters.get('transaction_type', '')
-	budget_line_id = filters.get('budget_line_id', '')
+	item_id = filters.get('item_id', '')
 
 	search_filter = Q(record_type=search_type)
 
@@ -160,11 +160,8 @@ def get_stores_filter(**filters):
 	elif transaction_type == 'property':
 		search_filter &= Q(is_property=True)
 
-	if budget_line_id and is_valid_uuid(budget_line_id):
-		search_filter &= (
-			Q(budget_item__u_budget_line_id=budget_line_id) |
-			Q(budget_item__d_budget_line_id=budget_line_id)
-		)
+	if item_id and is_valid_uuid(item_id):
+		search_filter &= Q(item_id=item_id)
 
 	if search_key != "":
 		search_filter &= (
@@ -177,23 +174,6 @@ def get_stores_filter(**filters):
 		now = timezone.now()
 		period_ago = now - timedelta(days=int(n_days))
 		search_filter &= Q(action_date__gte=period_ago)
-
-	return search_filter
-
-
-def get_budgets_filter(**filters):
-	search_key = filters.get('search_key', '')
-	search_start_date = filters.get('search_start_date', '')
-	search_end_date = filters.get('search_end_date', '')
-
-	search_filter = Q()
-
-	if search_key != "":
-		search_filter &= (
-			Q(amount__icontains=search_key) | Q(name__icontains=search_key)
-		)
-	if search_start_date != "" and search_end_date != "":
-		search_filter &= Q(start_date__range=(search_start_date, search_end_date))
 
 	return search_filter
 

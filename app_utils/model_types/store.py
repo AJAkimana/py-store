@@ -1,11 +1,8 @@
-import calendar
-from datetime import date
-
 import graphene
 from graphene_django import DjangoObjectType
 
 from apps.behavior_ip.models import Behavior
-from apps.budgeting.models import Budget, BudgetItem, DefaultBudgetLine, UserBudgetLine
+from apps.budgets.schema.types import BudgetItemType
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 from apps.manage_system.models import Salary
@@ -15,8 +12,10 @@ from apps.stores.models import Store, RecurringStore
 class StoreType(DjangoObjectType):
     class Meta:
         model = Store
+        exclude = ('budget_item',)
 
     is_recurring = graphene.Boolean()
+    item = graphene.Field(BudgetItemType, description='The budget item this expense is for')
 
     def resolve_is_recurring(self, info, **kwargs):
         return RecurringStore.objects.filter(user=self.user, name=self.description).exists()
@@ -42,72 +41,6 @@ class BehaviorType(DjangoObjectType):
         model = Behavior
 
 
-class BudgetType(DjangoObjectType):
-    class Meta:
-        model = Budget
-
-    amount = graphene.Float()
-    amount_spent = graphene.Float()
-
-    def resolve_amount(self, info, **kwargs):
-        return sum([it.amount for it in self.budget_items.all()])
-
-    def resolve_amount_spent(self, info, **kwargs):
-        amount = 0
-        for it in self.budget_items.all():
-            amount += sum([store.amount for store in it.stores.all()])
-        return amount
-
-
-class DefaultBudgetLineType(DjangoObjectType):
-    class Meta:
-        model = DefaultBudgetLine
-
-
-class UserBudgetLineType(DjangoObjectType):
-    class Meta:
-        model = UserBudgetLine
-
-
-class BudgetLineType(graphene.ObjectType):
-    id = graphene.String(required=True)
-    name = graphene.String()
-    description = graphene.String()
-    amount = graphene.Float()
-    is_system = graphene.Boolean()
-    enabled = graphene.Boolean()
-
-
-class BudgetItemType(DjangoObjectType):
-    class Meta:
-        model = BudgetItem
-
-    amount_spent = graphene.Float()
-
-    def resolve_amount_spent(self, info, **kwargs):
-        # Filter stores using 1st day of the month and current date
-        today = date.today()
-        first_day = today.replace(day=1)
-        today = date.today()
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        last_day_of_month = date(today.year, today.month, last_day)
-        all_stores = self.stores.filter(
-            action_date__gte=first_day, action_date__lte=last_day_of_month)
-        return sum([store.amount for store in all_stores])
-
-
-class BudgetDetailType(graphene.ObjectType):
-    id = graphene.String()
-    name = graphene.String()
-    amount = graphene.Float()
-    amount_spent = graphene.Float()
-    description = graphene.String()
-    start_date = graphene.Date()
-    end_date = graphene.Date()
-    status = graphene.String()
-    budget_items = graphene.List(BudgetItemType)
-
-
 class BehaviorType(DjangoObjectType):
     class Meta:
         model = Behavior
@@ -131,14 +64,6 @@ class StoreInputType(graphene.InputObjectType):
     is_inflow = graphene.Boolean()
     action_date = graphene.Date()
     description = graphene.String()
-
-
-class BudgetItemInputType(graphene.InputObjectType):
-    name = graphene.String()
-    amount = graphene.Float()
-    is_recurring = graphene.Boolean()
-    u_budget_line_id = graphene.String(required=False)
-    d_budget_line_id = graphene.String(required=False)
 
 
 class StorePaginatorType(PaginatorType):
@@ -191,7 +116,3 @@ class SalaryType(DjangoObjectType):
 
 class SalaryPaginatorType(PaginatorType):
     page_data = graphene.List(SalaryType)
-
-
-class BudgetPaginatorType(PaginatorType):
-    page_data = graphene.List(BudgetType)

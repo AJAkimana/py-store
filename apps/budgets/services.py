@@ -1,9 +1,9 @@
 """
 Budget rules and spending calculations.
 
-Spending is never stored: a transaction counts toward a budget when it is an
-expense of the budget's owner, tagged with an item, and dated within the
-budget's period.
+Budgets of one owner may overlap (eg: a monthly budget next to a house-building budget),
+so a transaction says which budget it belongs to: `Store.budget` plus `Store.item`.
+Spending is never stored; it is the sum of the expenses linked to a budget.
 """
 from datetime import date
 from decimal import Decimal
@@ -27,12 +27,12 @@ def owner_of(budget: Budget) -> BudgetOwner:
 
 
 def budget_expenses(budget: Budget):
-	"""All expenses of the budget's owner within its period (tagged or not)."""
-	return Store.objects.filter(
-		owner_of(budget).store_filter(),
-		is_inflow=False,
-		action_date__range=(budget.start_date, budget.end_date),
-	)
+	"""Expenses linked to the budget."""
+	return Store.objects.filter(budget=budget, is_inflow=False)
+
+
+def _total(queryset) -> Decimal:
+	return Decimal(str(queryset.aggregate(total=Sum('amount'))['total'] or 0))
 
 
 def allocations_with_spending(budget: Budget):
@@ -54,14 +54,16 @@ def allocations_with_spending(budget: Budget):
 
 
 def budget_totals(budget: Budget) -> dict:
-	"""allocated / spent (on planned items) / unbudgeted (everything else) for a budget."""
+	"""allocated / spent / remaining for a budget, plus `unbudgeted`: the owner's expenses
+	within the period that aren't linked to any budget."""
 	allocated = budget.allocations.aggregate(total=Sum('amount'))['total'] or Decimal('0')
-	planned_items = budget.allocations.values('item_id')
-	expenses = budget_expenses(budget)
-	spent = expenses.filter(item_id__in=planned_items).aggregate(total=Sum('amount'))['total'] or 0
-	unbudgeted = expenses.exclude(item_id__in=planned_items).aggregate(
-		total=Sum('amount'))['total'] or 0
-	spent, unbudgeted = Decimal(str(spent)), Decimal(str(unbudgeted))
+	spent = _total(budget_expenses(budget))
+	unbudgeted = _total(Store.objects.filter(
+		owner_of(budget).store_filter(),
+		is_inflow=False,
+		budget__isnull=True,
+		action_date__range=(budget.start_date, budget.end_date),
+	))
 	return {
 		'allocated': allocated,
 		'spent': spent,
@@ -70,26 +72,12 @@ def budget_totals(budget: Budget) -> dict:
 	}
 
 
-def active_budget(owner: BudgetOwner, on: date = None):
-	"""The owner's active budget covering a date (today by default)."""
+def active_budgets(owner: BudgetOwner, on: date = None):
+	"""The owner's active budgets covering a date (today by default); they may overlap."""
 	on = on or date.today()
 	return Budget.objects.filter(
 		owner.filter(), status=BudgetStatus.ACTIVE, start_date__lte=on, end_date__gte=on,
-	).first()
-
-
-def overlapping_active_budget(budget: Budget):
-	"""Another active budget of the same owner whose period overlaps this one."""
-	return (
-		Budget.objects.filter(
-			owner_of(budget).filter(),
-			status=BudgetStatus.ACTIVE,
-			start_date__lte=budget.end_date,
-			end_date__gte=budget.start_date,
-		)
-		.exclude(id=budget.id)
-		.first()
-	)
+	).order_by('end_date', 'name')
 
 
 ALLOWED_TRANSITIONS = {
@@ -105,16 +93,17 @@ def validate_budget(budget: Budget):
 		raise GraphQLError("The budget name can't be empty")
 	if budget.end_date < budget.start_date:
 		raise GraphQLError('The end date must be on or after the start date')
-	if budget.status == BudgetStatus.ACTIVE:
-		other = overlapping_active_budget(budget)
-		if other:
-			raise GraphQLError(
-				f"This period overlaps the active budget '{other.name}' "
-				f"({other.start_date} → {other.end_date})")
 	duplicate = Budget.objects.filter(
 		owner_of(budget).filter(), name__iexact=budget.name.strip()).exclude(id=budget.id)
 	if duplicate.exists():
 		raise GraphQLError(f"A budget named '{budget.name.strip()}' already exists")
+	if budget.pk:
+		outside = Store.objects.filter(budget=budget).exclude(
+			action_date__range=(budget.start_date, budget.end_date)).count()
+		if outside:
+			raise GraphQLError(
+				f'{outside} transaction(s) linked to this budget would fall outside the new '
+				'period. Move or unlink them first.')
 
 
 def change_status(budget: Budget, new_status: str) -> Budget:
@@ -127,6 +116,9 @@ def change_status(budget: Budget, new_status: str) -> Budget:
 		raise GraphQLError(f"A {budget.status} budget can't become {new_status}")
 	if new_status == BudgetStatus.ACTIVE and not budget.allocations.exists():
 		raise GraphQLError('Add at least one item before activating the budget')
+	if new_status == BudgetStatus.DRAFT and Store.objects.filter(budget=budget).exists():
+		raise GraphQLError(
+			"This budget already has transactions; close it instead of moving it back to draft")
 	budget.status = new_status
 	validate_budget(budget)
 	budget.save()
@@ -144,10 +136,28 @@ def validate_item_usable(owner: BudgetOwner, item_id) -> None:
 		raise GraphQLError('Invalid budget item')
 
 
+def validate_transaction_budget(owner: BudgetOwner, budget_id, item_id, action_date) -> Budget:
+	"""Check a transaction may be linked to a budget and one of its items."""
+	budget = Budget.objects.filter(owner.filter(), id=budget_id).first()
+	if budget is None:
+		raise GraphQLError('Budget not found')
+	if budget.status != BudgetStatus.ACTIVE:
+		raise GraphQLError(f"'{budget.name}' is not active; only active budgets take transactions")
+	if not budget.start_date <= action_date <= budget.end_date:
+		raise GraphQLError(
+			f"The date is outside '{budget.name}' ({budget.start_date} → {budget.end_date})")
+	if not item_id:
+		raise GraphQLError(f"Choose which item of '{budget.name}' this expense is for")
+	if not budget.allocations.filter(item_id=item_id).exists():
+		raise GraphQLError(f"That item isn't planned in '{budget.name}'")
+	return budget
+
+
 def set_allocations(budget: Budget, allocations) -> None:
 	"""Replace a budget's allocations with `allocations` = [(item_id, Decimal amount)].
 
 	Items already allocated keep their row (amount updated); others are added or removed.
+	Items that already have transactions in this budget can't be removed.
 	"""
 	ensure_editable(budget)
 	owner = owner_of(budget)
@@ -157,7 +167,8 @@ def set_allocations(budget: Budget, allocations) -> None:
 		if key in wanted:
 			raise GraphQLError('Each item can only appear once in a budget')
 		wanted[key] = amount
-	existing = {str(a.item_id): a for a in BudgetAllocation.objects.filter(budget=budget)}
+	existing = {str(a.item_id): a for a in BudgetAllocation.objects.filter(
+		budget=budget).select_related('item')}
 	new_ids = set(wanted) - set(existing)
 	if new_ids:
 		usable = {str(i) for i in owner.usable_items().filter(id__in=new_ids).values_list('id', flat=True)}
@@ -165,6 +176,12 @@ def set_allocations(budget: Budget, allocations) -> None:
 			raise GraphQLError('Invalid budget item')
 	if budget.status == BudgetStatus.ACTIVE and not wanted:
 		raise GraphQLError("An active budget needs at least one item")
+	removed = [existing[key] for key in set(existing) - set(wanted)]
+	used = {str(i) for i in Store.objects.filter(
+		budget=budget, item_id__in=[a.item_id for a in removed]).values_list('item_id', flat=True)}
+	if used:
+		names = ', '.join(sorted(existing[key].item.name for key in used))
+		raise GraphQLError(f"{names} already have transactions in this budget and can't be removed")
 
 	BudgetAllocation.objects.filter(budget=budget).exclude(
 		item_id__in=list(wanted)).hard_delete()

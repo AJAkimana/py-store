@@ -136,7 +136,12 @@ class _Migrator:
 			if line_id:
 				item_id = self.line_map[line_id]
 			elif owner_id:
-				item_id = self._item(name=old.name, user_id=owner_id).id
+				# A free-text name matching a common item uses it instead of a same-named copy
+				system = self.alive_items.get((None, _clean_name(old.name).lower()))
+				if system is not None and system.is_active:
+					item_id = system.id
+				else:
+					item_id = self._item(name=old.name, user_id=owner_id).id
 			else:
 				skipped += 1
 				continue
@@ -197,6 +202,45 @@ class _Migrator:
 
 def migrate_legacy_budgeting(apps, schema_editor=None, today=None, log=print):
 	_Migrator(apps, today=today, log=log).run()
+
+
+def link_transactions_to_budgets(apps, schema_editor=None, log=print):
+	"""Link each tagged expense to its budget: the owner's active or closed budget whose
+	period covers the date and that plans the expense's item. Left unlinked when none or
+	more than one budget matches."""
+	Store = apps.get_model('stores', 'Store')
+	Budget = apps.get_model('budgets', 'Budget')
+	Allocation = apps.get_model('budgets', 'BudgetAllocation')
+
+	budgets = defaultdict(list)  # user_id -> [budget]
+	for budget in Budget._base_manager.filter(
+			deleted_at__isnull=True, user__isnull=False, status__in=['active', 'closed']):
+		budgets[budget.user_id].append(budget)
+	planned = set(Allocation._base_manager.filter(deleted_at__isnull=True).values_list(
+		'budget_id', 'item_id'))
+
+	by_budget = defaultdict(list)
+	ambiguous = 0
+	for store_id, user_id, item_id, action_date in Store._base_manager.filter(
+			item__isnull=False, budget__isnull=True, is_inflow=False,
+	).values_list('id', 'user_id', 'item_id', 'action_date'):
+		matches = [
+			b for b in budgets.get(user_id, [])
+			if b.start_date <= action_date <= b.end_date and (b.id, item_id) in planned
+		]
+		if len(matches) == 1:
+			by_budget[matches[0].id].append(store_id)
+		elif len(matches) > 1:
+			ambiguous += 1
+	for budget_id, store_ids in by_budget.items():
+		Store._base_manager.filter(id__in=store_ids).update(budget_id=budget_id)
+	linked = sum(len(ids) for ids in by_budget.values())
+	log(f'  budgets: linked {linked} transaction(s) to their budget'
+		+ (f', {ambiguous} left unlinked (several budgets match)' if ambiguous else ''))
+
+
+def unlink_transactions_from_budgets(apps, schema_editor=None):
+	apps.get_model('stores', 'Store')._base_manager.update(budget=None)
 
 
 def undo_legacy_budgeting(apps, schema_editor=None):

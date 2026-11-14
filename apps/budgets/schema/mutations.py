@@ -50,6 +50,13 @@ class CreateBudgetItem(graphene.Mutation):
 			scope = BudgetItem.objects.filter(owner.filter())
 			item = owner.assign(BudgetItem())
 
+		if not is_system:
+			common = BudgetItem.objects.filter(
+				user__isnull=True, household__isnull=True, is_active=True, name__iexact=name).first()
+			if common:
+				raise GraphQLError(
+					f"'{common.name}' is a common item. Switch it on under common items instead "
+					"of creating your own copy.")
 		existing = scope.filter(name__iexact=name).first()
 		if existing and existing.is_active:
 			raise GraphQLError(f"The budget item '{existing.name}' already exists")
@@ -285,7 +292,10 @@ class DeleteBudget(graphene.Mutation):
 	@login_required
 	def mutate(self, info, id, household_id=None):
 		budget = get_owned_budget(info.context.user, id, household_id)
-		budget.delete()
+		with transaction.atomic():
+			# Transactions are kept; they just no longer count toward a budget
+			Store.all_objects.filter(budget=budget).update(budget=None)
+			budget.delete()
 		return DeleteBudget(message='Successfully deleted')
 
 

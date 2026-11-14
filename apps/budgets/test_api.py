@@ -56,10 +56,10 @@ query($id: ID!) { budget(id: $id) { name status allocated spent remaining unbudg
   allocations { amount spent remaining item { name } } } }'''
 CREATE_STORE = '''
 mutation($amount: Float!, $date: Date!, $desc: String!, $household: String!, $itemId: String,
-         $inflow: Boolean = false) {
+         $budgetId: String, $inflow: Boolean = false) {
   createStore(amount: $amount, actionDate: $date, description: $desc, householdId: $household,
-              recordType: "use", isInflow: $inflow, itemId: $itemId) {
-    store { id item { name } }
+              recordType: "use", isInflow: $inflow, itemId: $itemId, budgetId: $budgetId) {
+    store { id item { name } budget { name } }
   }
 }'''
 
@@ -106,6 +106,12 @@ class BudgetItemApiTests(GraphQLTestCase):
 		recreate = self.ok(CREATE_ITEM, name='food')['createBudgetItem']['item']
 		self.assertEqual(recreate['id'], str(used.id))  # archived item comes back
 
+	def test_own_item_cannot_copy_a_common_item(self):
+		BudgetItem.objects.create(name='Transport')
+		self.assertIn('common item', self.error(CREATE_ITEM, name='transport'))
+		BudgetItem.objects.create(name='Retired', is_active=False)
+		self.ok(CREATE_ITEM, name='Retired')  # archived common items don't block
+
 
 class BudgetApiTests(GraphQLTestCase):
 	def setUp(self):
@@ -123,45 +129,87 @@ class BudgetApiTests(GraphQLTestCase):
 			allocations=self.allocations(**amounts))
 		return data['createBudget']['budget']
 
-	def test_daily_transactions_count_toward_the_budget_covering_their_date(self):
-		budget = self.create(status='active', transport=50000, rent=200000)
-		self.assertEqual(budget['status'], 'active')
+	def store(self, amount, on, desc, item=None, budget=None, **extra):
+		return self.run_gql(
+			CREATE_STORE, amount=amount, date=on, desc=desc, household=str(self.household.id),
+			itemId=str(item.id) if item else None, budgetId=budget, **extra)
 
-		self.ok(CREATE_STORE, amount=6000, date='2026-11-14', desc='Moto',
-			household=str(self.household.id), itemId=str(self.transport.id))
-		self.ok(CREATE_STORE, amount=2000, date='2026-11-15', desc='Snacks',
-			household=str(self.household.id))
-		self.ok(CREATE_STORE, amount=9000, date='2026-12-15', desc='Bus later',
-			household=str(self.household.id), itemId=str(self.transport.id))
+	def test_transactions_count_toward_the_budget_they_are_linked_to(self):
+		monthly = self.create(status='active', transport=50000, rent=200000)
+		house = self.create(
+			name='House', start='2026-06-01', end='2027-06-30', status='active', transport=900000)
 
-		data = self.ok(BUDGET, id=budget['id'])['budget']
+		result = self.store(6000, '2026-11-14', 'Moto', self.transport, monthly['id'])
+		self.assertIsNone(result.errors, result.errors)
+		self.assertEqual(result.data['createStore']['store']['budget'], {'name': 'Nov'})
+		self.assertIsNone(self.store(40000, '2026-11-14', 'Truck', self.transport, house['id']).errors)
+		self.assertIsNone(self.store(2000, '2026-11-15', 'Snacks').errors)
+		self.assertIsNone(self.store(3000, '2026-11-15', 'Bus', self.transport).errors)
+
+		data = self.ok(BUDGET, id=monthly['id'])['budget']
 		self.assertEqual(data['allocated'], 250000)
 		self.assertEqual(data['spent'], 6000)
 		self.assertEqual(data['remaining'], 244000)
-		self.assertEqual(data['unbudgeted'], 2000)
+		self.assertEqual(data['unbudgeted'], 5000)  # snacks + bus: not linked to any budget
 		rows = {a['item']['name']: a for a in data['allocations']}
 		self.assertEqual(rows['Transport']['remaining'], 44000)
+		self.assertEqual(self.ok(BUDGET, id=house['id'])['budget']['spent'], 40000)
 
-	def test_store_item_validation(self):
+		active = 'query($d: Date) { activeBudgets(date: $d) { name } }'
+		names = [b['name'] for b in self.ok(active, d='2026-11-20')['activeBudgets']]
+		self.assertEqual(names, ['Nov', 'House'])
+		self.assertEqual(self.ok(active, d='2027-03-01')['activeBudgets'], [{'name': 'House'}])
+
+	def test_store_budget_validation(self):
+		budget = self.create(status='active', transport=100)
+		draft = self.create(name='Draft', transport=100)
+		cases = [
+			(self.store(1, '2026-11-14', 'a', None, budget['id']), 'Choose which item'),
+			(self.store(1, '2026-11-14', 'b', self.rent, budget['id']), "isn't planned"),
+			(self.store(1, '2027-01-01', 'c', self.transport, budget['id']), 'outside'),
+			(self.store(1, '2026-11-14', 'd', self.transport, draft['id']), 'not active'),
+			(self.store(1, '2026-11-14', 'e', self.transport, budget['id'], inflow=True), 'income'),
+		]
+		for result, message in cases:
+			self.assertTrue(result.errors, message)
+			self.assertIn(message, str(result.errors[0]))
 		theirs = BudgetItem.objects.create(name='Theirs', user=make_user())
 		disabled_system = BudgetItem.objects.create(name='Water')
 		for item in (theirs, disabled_system):
-			self.assertIn('Invalid budget item', self.error(
-				CREATE_STORE, amount=1, date='2026-11-14', desc=f'x {item.name}',
-				household=str(self.household.id), itemId=str(item.id)))
-		self.assertIn("income", self.error(
-			CREATE_STORE, amount=1, date='2026-11-14', desc='Salary', inflow=True,
-			household=str(self.household.id), itemId=str(self.transport.id)))
+			self.assertIn('Invalid budget item', str(self.store(1, '2026-11-14', item.name, item).errors[0]))
 
-	def test_overlap_and_status_rules(self):
+	def test_editing_a_linked_transaction(self):
+		budget = self.create(status='active', transport=100)
+		store_id = self.store(5, '2026-11-14', 'Moto', self.transport, budget['id']).data[
+			'createStore']['store']['id']
+		self.ok('mutation($id: ID!, $s: String!) { setBudgetStatus(id: $id, status: $s) { message } }',
+			id=budget['id'], s='closed')
+		update = '''mutation($id: String!, $h: String!, $item: String, $budget: String, $amount: Float!) {
+		  updateStore(id: $id, amount: $amount, actionDate: "2026-11-14", description: "Moto",
+		    householdId: $h, recordType: "use", isInflow: false, itemId: $item, budgetId: $budget) {
+		    message } }'''
+		args = dict(id=store_id, h=str(self.household.id), item=str(self.transport.id))
+		self.ok(update, budget=budget['id'], amount=7, **args)  # same link on a closed budget
+		self.ok(update, budget=None, amount=7, **args)  # unlink
+		self.assertIsNone(Store.objects.get(id=store_id).budget_id)
+		# Linking again isn't allowed: the budget is closed
+		self.assertIn('not active', self.error(update, budget=budget['id'], amount=7, **args))
+
+	def test_status_rules(self):
 		self.create(name='Nov', status='active', rent=1)
-		self.assertIn('overlaps', self.error(
-			CREATE_BUDGET, name='Mid', start='2026-12-01', end='2026-12-20', status='active',
-			allocations=self.allocations(rent=1)))
-		self.assertFalse(Budget.objects.filter(name='Mid').exists())  # rolled back
+		self.create(name='Mid', start='2026-12-01', end='2026-12-20', status='active', rent=1)
 		self.assertIn('at least one item', self.error(
 			CREATE_BUDGET, name='Empty', start='2027-01-01', end='2027-01-02', status='active',
 			allocations=[]))
+		self.assertFalse(Budget.objects.filter(name='Empty').exists())  # rolled back
+
+	def test_deleting_a_budget_keeps_its_transactions(self):
+		budget = self.create(status='active', transport=100)
+		self.store(5, '2026-11-14', 'Moto', self.transport, budget['id'])
+		self.ok('mutation($id: ID!) { deleteBudget(id: $id) { message } }', id=budget['id'])
+		store = Store.objects.get(description='Moto')
+		self.assertIsNone(store.budget_id)
+		self.assertEqual(store.item, self.transport)
 
 	def test_set_allocations_copy_and_close(self):
 		budget = self.create(transport=100)
@@ -198,11 +246,3 @@ class BudgetApiTests(GraphQLTestCase):
 	def test_household_scope_is_reserved(self):
 		query = 'query($h: ID) { budgets(householdId: $h) { totalCount } }'
 		self.assertIn('not available yet', self.error(query, h=str(self.household.id)))
-
-	def test_active_budget_query(self):
-		self.create(status='active', rent=1)
-		query = 'query($d: Date) { activeBudget(date: $d) { name } }'
-		self.assertEqual(self.ok(query, d='2026-11-20')['activeBudget'], {'name': 'Nov'})
-		self.assertIsNone(self.ok(query, d='2027-03-01')['activeBudget'])
-		self.assertEqual(Budget.objects.get(name='Nov').status, BudgetStatus.ACTIVE)
-		self.assertEqual(Store.objects.count(), 0)

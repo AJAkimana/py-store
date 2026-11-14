@@ -8,11 +8,12 @@ from django.test import TestCase
 from graphql import GraphQLError
 
 from apps.budgeting import models as old
-from apps.budgets.legacy import migrate_legacy_budgeting
+from apps.budgets.legacy import link_transactions_to_budgets, migrate_legacy_budgeting
 from apps.budgets.models import Budget, BudgetAllocation, BudgetItem, BudgetStatus, ItemActivation
 from apps.budgets.owner import BudgetOwner, resolve_owner
 from apps.budgets.services import (
-	active_budget, allocations_with_spending, budget_totals, change_status, validate_budget,
+	active_budgets, allocations_with_spending, budget_totals, change_status, set_allocations,
+	validate_budget,
 )
 from apps.households.models import Household
 from apps.stores.models import Store
@@ -126,35 +127,54 @@ class SpendingTests(TestCase):
 	def setUp(self):
 		self.user = make_user()
 		self.budget = make_budget(
-			self.user, date(2026, 11, 10), date(2026, 12, 9), transport=50000, rent=200000)
+			self.user, date(2026, 11, 10), date(2026, 12, 9), status=BudgetStatus.ACTIVE,
+			transport=50000, rent=200000)
 		self.transport = item_by_name(self.user, 'transport')
 		self.rent = item_by_name(self.user, 'rent')
 		self.food = item_by_name(self.user, 'food')
 
-	def test_spending_follows_the_budget_period_not_the_month(self):
-		make_store(self.user, 6000, date(2026, 11, 14), self.transport)
-		make_store(self.user, 4000, date(2026, 12, 9), self.transport)  # last day counts
-		make_store(self.user, 9999, date(2026, 11, 9), self.transport)  # before period
-		make_store(self.user, 9999, date(2026, 12, 10), self.transport)  # after period
-		make_store(self.user, 7777, date(2026, 11, 20), self.transport, is_inflow=True)
-		make_store(make_user(), 5555, date(2026, 11, 20))  # someone else
+	def test_spending_counts_only_transactions_linked_to_the_budget(self):
+		make_store(self.user, 6000, date(2026, 11, 14), self.transport, budget=self.budget)
+		make_store(self.user, 4000, date(2026, 12, 9), self.transport, budget=self.budget)
+		make_store(self.user, 9999, date(2026, 11, 20), self.transport)  # tagged, not linked
+		other = make_budget(
+			self.user, date(2026, 11, 1), date(2027, 6, 30), status=BudgetStatus.ACTIVE,
+			name='House', transport=1000000)
+		make_store(self.user, 8888, date(2026, 11, 20), self.transport, budget=other)
 
 		rows = {a.item.name: a for a in allocations_with_spending(self.budget)}
 		self.assertEqual(rows['Transport'].spent, Decimal('10000'))
 		self.assertEqual(rows['Transport'].remaining, Decimal('40000'))
 		self.assertEqual(rows['Rent'].spent, Decimal('0'))
+		house = {a.item.name: a for a in allocations_with_spending(other)}
+		self.assertEqual(house['Transport'].spent, Decimal('8888'))
 
-	def test_totals_split_planned_and_unbudgeted(self):
-		make_store(self.user, 6000, date(2026, 11, 14), self.transport)
-		make_store(self.user, 150000, date(2026, 11, 15), self.rent)
-		make_store(self.user, 3000, date(2026, 11, 16), self.food)  # item not in the budget
+	def test_totals_and_unlinked_spending_in_the_period(self):
+		make_store(self.user, 6000, date(2026, 11, 14), self.transport, budget=self.budget)
+		make_store(self.user, 150000, date(2026, 11, 15), self.rent, budget=self.budget)
+		make_store(self.user, 3000, date(2026, 11, 16), self.food)  # not linked to a budget
 		make_store(self.user, 1000, date(2026, 11, 16))  # untagged
+		make_store(self.user, 500, date(2026, 12, 20))  # outside the period
+		make_store(self.user, 700, date(2026, 11, 16), is_inflow=True)  # income
 
 		totals = budget_totals(self.budget)
 		self.assertEqual(totals['allocated'], Decimal('250000'))
 		self.assertEqual(totals['spent'], Decimal('156000'))
 		self.assertEqual(totals['remaining'], Decimal('94000'))
 		self.assertEqual(totals['unbudgeted'], Decimal('4000'))
+
+	def test_items_with_transactions_cannot_be_removed(self):
+		make_store(self.user, 6000, date(2026, 11, 14), self.transport, budget=self.budget)
+		with self.assertRaisesMessage(GraphQLError, 'Transport'):
+			set_allocations(self.budget, [(self.rent.id, Decimal('1'))])
+		set_allocations(self.budget, [(self.transport.id, Decimal('70000'))])  # drop rent
+		self.assertEqual(self.budget.allocations.count(), 1)
+
+	def test_dates_cannot_exclude_linked_transactions(self):
+		make_store(self.user, 6000, date(2026, 12, 5), self.transport, budget=self.budget)
+		self.budget.end_date = date(2026, 11, 30)
+		with self.assertRaisesMessage(GraphQLError, 'outside the new period'):
+			validate_budget(self.budget)
 
 
 class StatusTests(TestCase):
@@ -166,17 +186,15 @@ class StatusTests(TestCase):
 		with self.assertRaises(GraphQLError):
 			change_status(budget, BudgetStatus.ACTIVE)
 
-	def test_active_budgets_cannot_overlap_but_drafts_can(self):
-		make_budget(
-			self.user, date(2026, 1, 1), date(2026, 1, 31), status=BudgetStatus.ACTIVE, rent=1)
-		draft = make_budget(self.user, date(2026, 1, 15), date(2026, 2, 15), rent=1)
-		with self.assertRaises(GraphQLError):
-			change_status(draft, BudgetStatus.ACTIVE)
-
-		later = make_budget(self.user, date(2026, 2, 1), date(2026, 2, 10), rent=1)
-		change_status(later, BudgetStatus.ACTIVE)  # adjacent, not overlapping
-		other_users = make_budget(make_user(), date(2026, 1, 1), date(2026, 3, 1), rent=1)
-		change_status(other_users, BudgetStatus.ACTIVE)
+	def test_active_budgets_may_overlap(self):
+		monthly = make_budget(self.user, date(2026, 1, 1), date(2026, 1, 31), rent=1)
+		house = make_budget(self.user, date(2025, 6, 1), date(2027, 6, 1), rent=1, name='House')
+		change_status(monthly, BudgetStatus.ACTIVE)
+		change_status(house, BudgetStatus.ACTIVE)
+		owner = BudgetOwner(user=self.user)
+		self.assertEqual(list(active_budgets(owner, date(2026, 1, 15))), [monthly, house])
+		self.assertEqual(list(active_budgets(owner, date(2026, 2, 1))), [house])
+		self.assertEqual(list(active_budgets(owner, date(2028, 1, 1))), [])
 
 	def test_transitions(self):
 		budget = make_budget(self.user, date(2026, 1, 1), date(2026, 1, 31), rent=1)
@@ -187,19 +205,19 @@ class StatusTests(TestCase):
 		with self.assertRaises(GraphQLError):
 			change_status(budget, 'approved')
 
+	def test_budget_with_transactions_cannot_go_back_to_draft(self):
+		budget = make_budget(
+			self.user, date(2026, 1, 1), date(2026, 1, 31), status=BudgetStatus.ACTIVE, rent=1)
+		make_store(self.user, 10, date(2026, 1, 2), item_by_name(self.user, 'rent'), budget=budget)
+		with self.assertRaisesMessage(GraphQLError, 'close it instead'):
+			change_status(budget, BudgetStatus.DRAFT)
+
 	def test_duplicate_name_rejected(self):
 		make_budget(self.user, date(2026, 1, 1), date(2026, 1, 31), name='November')
 		dup = Budget(
 			user=self.user, name='november', start_date=date(2027, 1, 1), end_date=date(2027, 1, 2))
 		with self.assertRaises(GraphQLError):
 			validate_budget(dup)
-
-	def test_active_budget_lookup(self):
-		budget = make_budget(
-			self.user, date(2026, 11, 1), date(2026, 11, 30), status=BudgetStatus.ACTIVE, rent=1)
-		owner = BudgetOwner(user=self.user)
-		self.assertEqual(active_budget(owner, date(2026, 11, 14)), budget)
-		self.assertIsNone(active_budget(owner, date(2026, 12, 1)))
 
 
 class LegacyMigrationTests(TestCase):
@@ -236,6 +254,7 @@ class LegacyMigrationTests(TestCase):
 			d_budget_line=self.sys_transport)  # same item twice: summed
 		self.i_rent = item(name='Rent', amount=200000, budget=self.current, u_budget_line=self.u_rent)
 		self.i_free = item(name=' Gym ', amount=15000, budget=self.past)  # free text
+		item(name='transport', amount=7000, budget=self.past)  # free text, same as a common item
 		item(name='Netflix', amount=12000, budget=None, is_recurring=True)  # orphan recurring
 		other_sys = old.DefaultBudgetLine.objects.create(name='Electricity')
 		self.i_other_sys = item(
@@ -247,6 +266,7 @@ class LegacyMigrationTests(TestCase):
 		self.s_plain = make_store(self.user, 999, date(2026, 11, 2))
 
 		migrate_legacy_budgeting(django_apps, today=self.today, log=lambda *_: None)
+		link_transactions_to_budgets(django_apps, log=lambda *_: None)
 
 	def test_lines_become_items_with_same_ids(self):
 		transport = BudgetItem.objects.get(id=self.sys_transport.id)
@@ -277,6 +297,19 @@ class LegacyMigrationTests(TestCase):
 			self.u_rent.id: Decimal('200000'),
 		})
 		self.assertFalse(BudgetAllocation.objects.filter(item__name='Netflix').exists())
+
+	def test_free_text_matching_a_common_item_uses_it(self):
+		self.assertFalse(BudgetItem.objects.filter(user=self.user, name__iexact='transport').exists())
+		past = {a.item_id: a.amount for a in BudgetAllocation.objects.filter(budget=self.past.id)}
+		self.assertEqual(past[self.sys_transport.id], Decimal('7000'))
+
+	def test_tagged_expenses_are_linked_to_their_budget(self):
+		self.s_transport.refresh_from_db()
+		self.s_gym.refresh_from_db()
+		self.s_plain.refresh_from_db()
+		self.assertEqual(self.s_transport.budget_id, self.current.id)
+		self.assertEqual(self.s_gym.budget_id, self.past.id)  # closed budgets too
+		self.assertIsNone(self.s_plain.budget_id)
 
 	def test_stores_are_tagged_with_items(self):
 		self.s_transport.refresh_from_db()

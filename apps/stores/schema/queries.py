@@ -25,7 +25,8 @@ class StoreQuery(graphene.ObjectType):
 		store_type=graphene.String(),
 		search_member=graphene.String(),
 		transaction_type=graphene.String(),
-		item_id=graphene.String(description='Only expenses tagged with this budget item')
+		item_id=graphene.String(description='Only expenses tagged with this budget item'),
+		budget_id=graphene.String(description='Only expenses linked to this budget')
 	)
 	store = graphene.Field(StoreType, id=graphene.String(required=True))
 	total_inflow = graphene.Int(store_type=graphene.String())

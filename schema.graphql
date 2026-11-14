@@ -31,8 +31,10 @@ type AppQuery {
   ): BudgetPaginatorType
   budget(id: ID!, householdId: ID): BudgetType
 
-  """The active budget covering a date (today by default), if any."""
-  activeBudget(householdId: ID, date: Date): BudgetType
+  """
+  Active budgets covering a date (today by default). Budgets may overlap.
+  """
+  activeBudgets(householdId: ID, date: Date): [BudgetType!]!
   myHouseholdMemberships: [HouseholdMemberType]
   households: [HouseholdType]
   dbBackup: DbBackupType
@@ -53,6 +55,9 @@ type AppQuery {
 
     """Only expenses tagged with this budget item"""
     itemId: String
+
+    """Only expenses linked to this budget"""
+    budgetId: String
   ): StorePaginatorType
   store(id: String!): StoreType
   totalInflow(storeType: String): Int
@@ -270,6 +275,9 @@ type StoreType {
 
   """The budget item this expense is for"""
   item: BudgetItemType
+
+  """The budget this expense counts toward"""
+  budget: BudgetType
   isRecurring: Boolean
 }
 
@@ -308,6 +316,37 @@ type BudgetItemType {
   enabled: Boolean
 }
 
+type BudgetType {
+  id: ID!
+  name: String!
+  description: String
+  startDate: Date
+  endDate: Date
+
+  """draft | active | closed"""
+  status: String
+  isHousehold: Boolean
+
+  """Total planned across items"""
+  allocated: Float
+
+  """Expenses on planned items within the period"""
+  spent: Float
+  remaining: Float
+
+  """Expenses within the period on items not in this budget, or untagged"""
+  unbudgeted: Float
+  allocations: [BudgetAllocationType!]!
+}
+
+type BudgetAllocationType {
+  id: ID!
+  item: BudgetItemType!
+  amount: Float
+  spent: Float
+  remaining: Float
+}
+
 type HouseholdMemberType {
   id: UUID!
   createdAt: DateTime
@@ -343,37 +382,6 @@ type BudgetPaginatorType {
   numPages: Int
   totalCount: Int
   pageData: [BudgetType!]
-}
-
-type BudgetType {
-  id: ID!
-  name: String!
-  description: String
-  startDate: Date
-  endDate: Date
-
-  """draft | active | closed"""
-  status: String
-  isHousehold: Boolean
-
-  """Total planned across items"""
-  allocated: Float
-
-  """Expenses on planned items within the period"""
-  spent: Float
-  remaining: Float
-
-  """Expenses within the period on items not in this budget, or untagged"""
-  unbudgeted: Float
-  allocations: [BudgetAllocationType!]!
-}
-
-type BudgetAllocationType {
-  id: ID!
-  item: BudgetItemType!
-  amount: Float
-  spent: Float
-  remaining: Float
 }
 
 type DbBackupType {
@@ -761,6 +769,11 @@ type AppMutations {
   createStore(
     actionDate: Date!
     amount: Float!
+
+    """
+    Active budget this expense counts toward; requires an item planned in it
+    """
+    budgetId: String
     description: String!
     householdId: String!
     isInflow: Boolean!
@@ -777,6 +790,11 @@ type AppMutations {
   updateStore(
     actionDate: Date!
     amount: Float!
+
+    """
+    Active budget this expense counts toward; requires an item planned in it
+    """
+    budgetId: String
     description: String!
     householdId: String!
     id: String!

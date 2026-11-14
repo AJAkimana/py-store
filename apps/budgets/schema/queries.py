@@ -9,7 +9,7 @@ from apps.budgets.models import Budget, BudgetItem, BudgetStatus, ItemActivation
 from apps.budgets.owner import resolve_owner
 from apps.budgets.schema.helpers import get_owned_budget
 from apps.budgets.schema.types import BudgetItemType, BudgetPaginatorType, BudgetType
-from apps.budgets.services import active_budget
+from apps.budgets.services import active_budgets
 
 
 class BudgetQuery(graphene.ObjectType):
@@ -36,9 +36,10 @@ class BudgetQuery(graphene.ObjectType):
 		page_number=graphene.Int(default_value=1),
 	)
 	budget = graphene.Field(BudgetType, id=graphene.ID(required=True), household_id=graphene.ID())
-	active_budget = graphene.Field(
-		BudgetType, household_id=graphene.ID(), date=graphene.Date(),
-		description='The active budget covering a date (today by default), if any.')
+	active_budgets = graphene.List(
+		graphene.NonNull(BudgetType), required=True,
+		household_id=graphene.ID(), date=graphene.Date(),
+		description='Active budgets covering a date (today by default). Budgets may overlap.')
 
 	@login_required
 	def resolve_budget_items(self, info, household_id=None, include_disabled=False):
@@ -81,9 +82,9 @@ class BudgetQuery(graphene.ObjectType):
 		return get_owned_budget(info.context.user, id, household_id)
 
 	@login_required
-	def resolve_active_budget(self, info, household_id=None, date=None):
+	def resolve_active_budgets(self, info, household_id=None, date=None):
 		owner = resolve_owner(info.context.user, household_id)
-		return active_budget(owner, date or _today())
+		return active_budgets(owner, date or _today())
 
 
 def _today():

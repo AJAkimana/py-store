@@ -2,7 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 
 from apps.behavior_ip.models import Behavior
-from apps.budgets.schema.types import BudgetItemType
+from apps.budgets.schema.types import BudgetItemType, BudgetType
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household
 from apps.manage_system.models import Salary
@@ -16,6 +16,7 @@ class StoreType(DjangoObjectType):
 
     is_recurring = graphene.Boolean()
     item = graphene.Field(BudgetItemType, description='The budget item this expense is for')
+    budget = graphene.Field(BudgetType, description='The budget this expense counts toward')
 
     def resolve_is_recurring(self, info, **kwargs):
         return RecurringStore.objects.filter(user=self.user, name=self.description).exists()

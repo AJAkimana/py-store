@@ -163,6 +163,10 @@ def get_stores_filter(**filters):
 	if item_id and is_valid_uuid(item_id):
 		search_filter &= Q(item_id=item_id)
 
+	budget_id = filters.get('budget_id', '')
+	if budget_id and is_valid_uuid(budget_id):
+		search_filter &= Q(budget_id=budget_id)
+
 	if search_key != "":
 		search_filter &= (
 			Q(amount__icontains=search_key) | Q(description__icontains=search_key)

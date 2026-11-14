@@ -278,7 +278,6 @@ type StoreType {
 
   """The budget this expense counts toward"""
   budget: BudgetType
-  isRecurring: Boolean
 }
 
 """An enumeration."""

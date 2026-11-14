@@ -14,12 +14,8 @@ class StoreType(DjangoObjectType):
         model = Store
         exclude = ('budget_item',)
 
-    is_recurring = graphene.Boolean()
     item = graphene.Field(BudgetItemType, description='The budget item this expense is for')
     budget = graphene.Field(BudgetType, description='The budget this expense counts toward')
-
-    def resolve_is_recurring(self, info, **kwargs):
-        return RecurringStore.objects.filter(user=self.user, name=self.description).exists()
 
 
 class RecurringStoreType(DjangoObjectType):

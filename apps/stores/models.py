@@ -29,6 +29,9 @@ class Store(BaseModel):
 		Household, related_name='stores', on_delete=models.PROTECT, null=True)
 	budget_item = models.ForeignKey(
 		BudgetItem, related_name='stores', on_delete=models.PROTECT, null=True)
+	# Revamped budgeting: the item this expense is for. Replaces budget_item.
+	item = models.ForeignKey(
+		'budgets.BudgetItem', related_name='stores', on_delete=models.PROTECT, null=True, blank=True)
 
 	class Meta:
 		db_table = "stores"

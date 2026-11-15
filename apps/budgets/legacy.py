@@ -9,13 +9,17 @@ Mapping
 - DefaultBudgetLine        -> BudgetItem (system), same id
 - UserBudgetLine           -> BudgetItem (owned by the user), same id, amount -> default_amount
 - UserDefaultBudgetLine    -> ItemActivation
-- Budget                   -> Budget (owned by the user), same id; approved -> active/closed,
-                              draft/pending -> draft. The old `household` column only recorded
-                              where the budget was created, so it is not copied as owner.
-- BudgetItem in a budget   -> BudgetAllocation (amounts of the same item in one budget summed)
-- BudgetItem without a line-> a user BudgetItem created from its name
-- BudgetItem without budget (old "recurring" items) -> default_amount of its item
-- Store.budget_item        -> Store.item
+- BudgetItem without a budget (the recurring items) -> the superadmin's own BudgetItems,
+                              amount -> default_amount. They are not made system items.
+- Budget                   -> Budget (owned by the user), same id; approved -> closed once
+                              expired (active otherwise), draft/pending -> draft. The old
+                              `household` column only recorded where the budget was created.
+- BudgetItem in a budget   -> BudgetAllocation of that budget. The item reuses the owner's
+                              active item (or common item) with the same name; otherwise an
+                              archived item is created, so it labels history without showing
+                              up in new budgets or transactions.
+- Store.budget_item        -> Store.item here, then Store.budget in migration 0003 (exactly
+                              the old item's budget), so every transaction keeps its link.
 """
 from collections import defaultdict
 from datetime import date
@@ -40,6 +44,7 @@ class _Migrator:
 		self.OldUserLine = apps.get_model('budgeting', 'UserBudgetLine')
 		self.OldBudget = apps.get_model('budgeting', 'Budget')
 		self.OldItem = apps.get_model('budgeting', 'BudgetItem')
+		self.User = apps.get_model('users', 'User')
 
 		self.items = {}  # id -> new BudgetItem
 		self.alive_items = {}  # (user_id | None, lower(name)) -> new BudgetItem
@@ -95,7 +100,43 @@ class _Migrator:
 			key = (self.line_map[udl.line_id], udl.user_id)
 			self.activations[key] = self.activations.get(key, False) or udl.enabled
 
-	# --- budgets -----------------------------------------------------------------------
+	# --- recurring items -> the superadmin's items -----------------------------------
+
+	def _superadmin_id(self):
+		admin = (
+			self.User._base_manager.filter(is_superuser=True, is_active=True)
+			.order_by('created_at', 'id').first()
+			or self.User._base_manager.filter(is_superuser=True).order_by('created_at', 'id').first()
+		)
+		return admin.id if admin else None
+
+	def migrate_recurring_items(self):
+		"""Old items without a budget are the recurring items; they become the superadmin's
+		own items. Items inside budgets are left in the legacy table."""
+		admin_id = self._superadmin_id()
+		if admin_id is None:
+			self.log('  budget items: no superadmin found; recurring items keep their own user')
+		skipped = 0
+		recurring = self.OldItem._base_manager.filter(
+			budget__isnull=True, deleted_at__isnull=True).order_by('created_at')
+		for old in recurring:
+			line_id = old.d_budget_line_id or old.u_budget_line_id
+			owner_id = admin_id or old.user_id
+			if line_id:
+				item = self.items[self.line_map[line_id]]
+			elif owner_id:
+				item = self._item(name=old.name, user_id=owner_id)
+			else:
+				skipped += 1
+				continue
+			self.old_item_map[old.id] = item.id
+			if item.user_id and not item.default_amount:
+				item.default_amount = max(Decimal(str(old.amount or 0)), Decimal('0'))
+				item.save(update_fields=['default_amount'])
+		if skipped:
+			self.log(f'  budget items: skipped {skipped} recurring item(s) without an owner')
+
+	# --- budgets ---------------------------------------------------------------------
 
 	def _status(self, old):
 		if old.status == 'approved':
@@ -125,59 +166,56 @@ class _Migrator:
 		if skipped:
 			self.log(f'  budgets: skipped {skipped} legacy budget(s) without a user')
 
-	# --- budget items -> allocations ---------------------------------------------------
+	def _budget_item(self, old, owner_id):
+		"""The item for an old item inside a budget: its line, else an existing active item
+		of the owner (or common item) with the same name, else a new archived item."""
+		line_id = old.d_budget_line_id or old.u_budget_line_id
+		if line_id:
+			return self.items[self.line_map[line_id]]
+		name = _clean_name(old.name).lower()
+		for key in ((owner_id, name), (None, name)):
+			existing = self.alive_items.get(key)
+			if existing is not None and existing.is_active:
+				return existing
+		return self._item(name=old.name, user_id=owner_id, is_active=False)
 
 	def migrate_budget_items(self):
+		"""Items inside old budgets become those budgets' allocations (same item twice in one
+		budget: amounts summed). Deleted items are only mapped, for their transactions."""
 		allocations = defaultdict(Decimal)  # (budget_id, item_id) -> amount
 		skipped = 0
-		for old in self.OldItem._base_manager.select_related('budget').order_by('created_at'):
-			owner_id = old.user_id or (old.budget.user_id if old.budget_id else None)
-			line_id = old.d_budget_line_id or old.u_budget_line_id
-			if line_id:
-				item_id = self.line_map[line_id]
-			elif owner_id:
-				# A free-text name matching a common item uses it instead of a same-named copy
-				system = self.alive_items.get((None, _clean_name(old.name).lower()))
-				if system is not None and system.is_active:
-					item_id = system.id
-				else:
-					item_id = self._item(name=old.name, user_id=owner_id).id
-			else:
+		for old in self.OldItem._base_manager.filter(budget__isnull=False).select_related(
+				'budget').order_by('created_at'):
+			owner_id = old.budget.user_id or old.user_id
+			if owner_id is None:
 				skipped += 1
 				continue
-			self.old_item_map[old.id] = item_id
-			item = self.items[item_id]
-			if item.user_id is None and owner_id:
-				self.activations.setdefault((item_id, owner_id), True)
-
-			if old.deleted_at is not None:
-				continue
-			amount = Decimal(str(old.amount or 0))
-			if old.budget_id in self.budget_ids:
-				allocations[(old.budget_id, item_id)] += amount
-			elif old.budget_id is None and item.user_id and not item.default_amount:
-				item.default_amount = max(amount, Decimal('0'))
-				item.save(update_fields=['default_amount'])
-
+			item = self._budget_item(old, owner_id)
+			self.old_item_map[old.id] = item.id
+			if item.user_id is None:
+				self.activations.setdefault((item.id, owner_id), True)
+			if old.deleted_at is None and old.budget_id in self.budget_ids:
+				allocations[(old.budget_id, item.id)] += Decimal(str(old.amount or 0))
 		self.Allocation._base_manager.bulk_create([
 			self.Allocation(budget_id=budget_id, item_id=item_id, amount=max(amount, Decimal('0')))
 			for (budget_id, item_id), amount in allocations.items()
 		])
 		if skipped:
-			self.log(f'  budget items: skipped {skipped} legacy item(s) without an owner')
+			self.log(f'  budget items: skipped {skipped} item(s) of budgets without a user')
 
 	# --- transactions ------------------------------------------------------------------
 
 	def migrate_stores(self):
+		"""Every transaction tagged with an old item keeps it, under its new item."""
 		by_item = defaultdict(list)
 		for store_id, old_item_id, user_id in self.Store._base_manager.filter(
 				budget_item__isnull=False).values_list('id', 'budget_item_id', 'user_id'):
 			item_id = self.old_item_map.get(old_item_id)
 			if item_id is None:
 				continue
-			by_item[item_id].append(store_id)
 			if self.items[item_id].user_id is None:
 				self.activations.setdefault((item_id, user_id), True)
+			by_item[item_id].append(store_id)
 		for item_id, store_ids in by_item.items():
 			self.Store._base_manager.filter(id__in=store_ids).update(item_id=item_id)
 		return sum(len(ids) for ids in by_item.values())
@@ -190,6 +228,7 @@ class _Migrator:
 
 	def run(self):
 		self.migrate_lines()
+		self.migrate_recurring_items()
 		self.migrate_budgets()
 		self.migrate_budget_items()
 		stores = self.migrate_stores()
@@ -205,38 +244,22 @@ def migrate_legacy_budgeting(apps, schema_editor=None, today=None, log=print):
 
 
 def link_transactions_to_budgets(apps, schema_editor=None, log=print):
-	"""Link each tagged expense to its budget: the owner's active or closed budget whose
-	period covers the date and that plans the expense's item. Left unlinked when none or
-	more than one budget matches."""
+	"""Link each transaction to the budget its old item belonged to, exactly as before."""
 	Store = apps.get_model('stores', 'Store')
 	Budget = apps.get_model('budgets', 'Budget')
-	Allocation = apps.get_model('budgets', 'BudgetAllocation')
+	OldItem = apps.get_model('budgeting', 'BudgetItem')
 
-	budgets = defaultdict(list)  # user_id -> [budget]
-	for budget in Budget._base_manager.filter(
-			deleted_at__isnull=True, user__isnull=False, status__in=['active', 'closed']):
-		budgets[budget.user_id].append(budget)
-	planned = set(Allocation._base_manager.filter(deleted_at__isnull=True).values_list(
-		'budget_id', 'item_id'))
-
+	migrated = set(Budget._base_manager.values_list('id', flat=True))
+	item_budget = dict(OldItem._base_manager.filter(budget__isnull=False).values_list('id', 'budget_id'))
 	by_budget = defaultdict(list)
-	ambiguous = 0
-	for store_id, user_id, item_id, action_date in Store._base_manager.filter(
-			item__isnull=False, budget__isnull=True, is_inflow=False,
-	).values_list('id', 'user_id', 'item_id', 'action_date'):
-		matches = [
-			b for b in budgets.get(user_id, [])
-			if b.start_date <= action_date <= b.end_date and (b.id, item_id) in planned
-		]
-		if len(matches) == 1:
-			by_budget[matches[0].id].append(store_id)
-		elif len(matches) > 1:
-			ambiguous += 1
+	for store_id, old_item_id in Store._base_manager.filter(
+			budget_item__isnull=False, budget__isnull=True).values_list('id', 'budget_item_id'):
+		budget_id = item_budget.get(old_item_id)
+		if budget_id in migrated:
+			by_budget[budget_id].append(store_id)
 	for budget_id, store_ids in by_budget.items():
 		Store._base_manager.filter(id__in=store_ids).update(budget_id=budget_id)
-	linked = sum(len(ids) for ids in by_budget.values())
-	log(f'  budgets: linked {linked} transaction(s) to their budget'
-		+ (f', {ambiguous} left unlinked (several budgets match)' if ambiguous else ''))
+	log(f'  budgets: linked {sum(len(i) for i in by_budget.values())} transaction(s) to their budget')
 
 
 def unlink_transactions_from_budgets(apps, schema_editor=None):

@@ -203,13 +203,15 @@ class BudgetApiTests(GraphQLTestCase):
 			allocations=[]))
 		self.assertFalse(Budget.objects.filter(name='Empty').exists())  # rolled back
 
-	def test_deleting_a_budget_keeps_its_transactions(self):
+	def test_budget_with_transactions_cannot_be_deleted(self):
 		budget = self.create(status='active', transport=100)
+		empty = self.create(name='Empty', start='2027-01-01', end='2027-01-31', transport=1)
 		self.store(5, '2026-11-14', 'Moto', self.transport, budget['id'])
-		self.ok('mutation($id: ID!) { deleteBudget(id: $id) { message } }', id=budget['id'])
-		store = Store.objects.get(description='Moto')
-		self.assertIsNone(store.budget_id)
-		self.assertEqual(store.item, self.transport)
+		delete = 'mutation($id: ID!) { deleteBudget(id: $id) { message } }'
+		self.assertIn('close it instead', self.error(delete, id=budget['id']))
+		self.assertEqual(Store.objects.get(description='Moto').budget_id, Budget.objects.get(
+			name='Nov').id)
+		self.ok(delete, id=empty['id'])
 
 	def test_set_allocations_copy_and_close(self):
 		budget = self.create(transport=100)

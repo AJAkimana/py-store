@@ -292,10 +292,11 @@ class DeleteBudget(graphene.Mutation):
 	@login_required
 	def mutate(self, info, id, household_id=None):
 		budget = get_owned_budget(info.context.user, id, household_id)
-		with transaction.atomic():
-			# Transactions are kept; they just no longer count toward a budget
-			Store.all_objects.filter(budget=budget).update(budget=None)
-			budget.delete()
+		linked = Store.all_objects.filter(budget=budget).count()
+		if linked:
+			raise GraphQLError(
+				f'This budget has {linked} transaction(s) and can\'t be deleted; close it instead')
+		budget.delete()
 		return DeleteBudget(message='Successfully deleted')
 
 

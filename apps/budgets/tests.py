@@ -226,6 +226,7 @@ class LegacyMigrationTests(TestCase):
 	def setUp(self):
 		self.user = make_user()
 		self.other = make_user()
+		self.admin = make_user(is_superuser=True)
 		self.today = date(2026, 11, 14)
 
 		self.sys_transport = old.DefaultBudgetLine.objects.create(name='Transport')
@@ -254,19 +255,25 @@ class LegacyMigrationTests(TestCase):
 			d_budget_line=self.sys_transport)  # same item twice: summed
 		self.i_rent = item(name='Rent', amount=200000, budget=self.current, u_budget_line=self.u_rent)
 		self.i_free = item(name=' Gym ', amount=15000, budget=self.past)  # free text
+		self.i_gym_again = item(name='gym', amount=1000, budget=self.current)  # same archived item
 		item(name='transport', amount=7000, budget=self.past)  # free text, same as a common item
-		item(name='Netflix', amount=12000, budget=None, is_recurring=True)  # orphan recurring
+		self.i_netflix = item(name='Netflix', amount=12000, budget=None, is_recurring=True)
+		item(name='Internet', amount=30000, budget=None, user=self.other)  # recurring, other user
 		other_sys = old.DefaultBudgetLine.objects.create(name='Electricity')
-		self.i_other_sys = item(
-			name='Electricity', amount=5000, budget=self.past, d_budget_line=other_sys)
+		item(name='Electricity', amount=5000, budget=self.past, d_budget_line=other_sys)
 
 		self.s_transport = make_store(
 			self.user, 6000, date(2026, 11, 14), budget_item=self.i_transport)
 		self.s_gym = make_store(self.user, 15000, date(2026, 10, 5), budget_item=self.i_free)
+		self.s_netflix = make_store(self.user, 12000, date(2026, 11, 3), budget_item=self.i_netflix)
 		self.s_plain = make_store(self.user, 999, date(2026, 11, 2))
 
 		migrate_legacy_budgeting(django_apps, today=self.today, log=lambda *_: None)
 		link_transactions_to_budgets(django_apps, log=lambda *_: None)
+
+	def refresh_stores(self):
+		for store in (self.s_transport, self.s_gym, self.s_netflix, self.s_plain):
+			store.refresh_from_db()
 
 	def test_lines_become_items_with_same_ids(self):
 		transport = BudgetItem.objects.get(id=self.sys_transport.id)
@@ -276,11 +283,13 @@ class LegacyMigrationTests(TestCase):
 		self.assertEqual(rent.user, self.user)
 		self.assertEqual(rent.default_amount, Decimal('200000'))
 
-	def test_free_text_and_recurring_items_become_user_items(self):
-		gym = BudgetItem.objects.get(user=self.user, name='Gym')
-		self.assertEqual(gym.default_amount, 0)
-		netflix = BudgetItem.objects.get(user=self.user, name='Netflix')
+	def test_recurring_items_become_the_superadmins_items(self):
+		netflix = BudgetItem.objects.get(name='Netflix')
+		self.assertEqual(netflix.user, self.admin)
+		self.assertFalse(netflix.is_system)
+		self.assertTrue(netflix.is_active)
 		self.assertEqual(netflix.default_amount, Decimal('12000'))
+		self.assertEqual(BudgetItem.objects.get(name='Internet').user, self.admin)
 
 	def test_budgets_and_statuses(self):
 		self.assertEqual(Budget.objects.get(id=self.past.id).status, BudgetStatus.CLOSED)
@@ -290,42 +299,43 @@ class LegacyMigrationTests(TestCase):
 		self.assertIsNone(current.household)
 		self.assertEqual(Budget.objects.get(id=self.draft.id).status, BudgetStatus.DRAFT)
 
-	def test_allocations(self):
+	def test_items_in_budgets_become_allocations(self):
+		gym = BudgetItem.objects.get(user=self.user, name='Gym')
 		current = {a.item_id: a.amount for a in BudgetAllocation.objects.filter(budget=self.current.id)}
 		self.assertEqual(current, {
 			self.sys_transport.id: Decimal('50000'),
 			self.u_rent.id: Decimal('200000'),
+			gym.id: Decimal('1000'),
 		})
-		self.assertFalse(BudgetAllocation.objects.filter(item__name='Netflix').exists())
+		past = {a.item.name: a.amount for a in BudgetAllocation.objects.filter(budget=self.past.id)}
+		# free-text 'transport' reuses the common item
+		self.assertEqual(past, {
+			'Gym': Decimal('15000'), 'Transport': Decimal('7000'), 'Electricity': Decimal('5000')})
 
-	def test_free_text_matching_a_common_item_uses_it(self):
-		self.assertFalse(BudgetItem.objects.filter(user=self.user, name__iexact='transport').exists())
-		past = {a.item_id: a.amount for a in BudgetAllocation.objects.filter(budget=self.past.id)}
-		self.assertEqual(past[self.sys_transport.id], Decimal('7000'))
+	def test_items_only_known_from_old_budgets_are_archived(self):
+		gym = BudgetItem.objects.get(user=self.user, name='Gym')  # one item for both budgets
+		self.assertFalse(gym.is_active)
+		self.assertNotIn(gym, BudgetOwner(user=self.user).usable_items())
 
-	def test_tagged_expenses_are_linked_to_their_budget(self):
-		self.s_transport.refresh_from_db()
-		self.s_gym.refresh_from_db()
-		self.s_plain.refresh_from_db()
-		self.assertEqual(self.s_transport.budget_id, self.current.id)
-		self.assertEqual(self.s_gym.budget_id, self.past.id)  # closed budgets too
-		self.assertIsNone(self.s_plain.budget_id)
-
-	def test_stores_are_tagged_with_items(self):
-		self.s_transport.refresh_from_db()
-		self.s_gym.refresh_from_db()
-		self.s_plain.refresh_from_db()
-		self.assertEqual(self.s_transport.item_id, self.sys_transport.id)
-		self.assertEqual(self.s_gym.item.name, 'Gym')
-		self.assertIsNone(self.s_plain.item_id)
+	def test_transactions_keep_their_budget_and_item(self):
+		self.refresh_stores()
+		self.assertEqual(
+			(self.s_transport.item_id, self.s_transport.budget_id),
+			(self.sys_transport.id, self.current.id))
+		self.assertEqual((self.s_gym.item.name, self.s_gym.budget_id), ('Gym', self.past.id))
+		self.assertEqual((self.s_netflix.item.name, self.s_netflix.budget_id), ('Netflix', None))
+		self.assertEqual((self.s_plain.item_id, self.s_plain.budget_id), (None, None))
 
 	def test_used_system_items_are_enabled_for_the_user(self):
 		owner = BudgetOwner(user=self.user)
 		names = set(owner.usable_items().values_list('name', flat=True))
-		self.assertEqual(names, {'Transport', 'Rent', 'Gym', 'Netflix', 'Electricity'})
+		self.assertEqual(names, {'Transport', 'Rent', 'Electricity'})
 		self.assertEqual(ItemActivation.objects.filter(user=self.other).count(), 0)
 
 	def test_spending_after_migration(self):
 		budget = Budget.objects.get(id=self.current.id)
 		rows = {a.item.name: a.spent for a in allocations_with_spending(budget)}
 		self.assertEqual(rows['Transport'], Decimal('6000'))
+		past = Budget.objects.get(id=self.past.id)
+		self.assertEqual({a.item.name: a.spent for a in allocations_with_spending(past)}['Gym'],
+			Decimal('15000'))

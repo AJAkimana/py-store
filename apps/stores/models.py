@@ -33,8 +33,9 @@ class Store(BaseModel):
 	item = models.ForeignKey(
 		'budgets.BudgetItem', related_name='stores', on_delete=models.PROTECT, null=True, blank=True)
 	# The budget this expense counts toward; budgets may overlap, so it is chosen explicitly.
+	# A budget with transactions can't be deleted (close it instead).
 	budget = models.ForeignKey(
-		'budgets.Budget', related_name='stores', on_delete=models.SET_NULL, null=True, blank=True)
+		'budgets.Budget', related_name='stores', on_delete=models.PROTECT, null=True, blank=True)
 
 	class Meta:
 		db_table = "stores"

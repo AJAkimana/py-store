@@ -190,7 +190,7 @@ MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', '')
 # Used in emails that link to the app, eg: invites
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').rstrip('/')
 # How long an invited user's temporary password works
-INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', ''))
+INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', '7'))
 
 AUTHENTICATION_BACKENDS = [
 	# graphql_jwt's backend, plus rejecting tokens issued before a password reset

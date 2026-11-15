@@ -185,12 +185,12 @@ GRAPHQL_JWT = {
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # Required when DEBUG is off; in development a key is derived from SECRET_KEY.
 MFA_ENCRYPTION_KEY = os.getenv('MFA_ENCRYPTION_KEY', '')
-MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', 'D2DStore')
+MFA_ISSUER_NAME = os.getenv('MFA_ISSUER_NAME', '')
 
 # Used in emails that link to the app, eg: invites
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').rstrip('/')
 # How long an invited user's temporary password works
-INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', '7'))
+INVITE_PASSWORD_VALID_DAYS = int(os.getenv('INVITE_PASSWORD_VALID_DAYS', ''))
 
 AUTHENTICATION_BACKENDS = [
 	# graphql_jwt's backend, plus rejecting tokens issued before a password reset

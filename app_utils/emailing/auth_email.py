@@ -1,26 +1,8 @@
-from app_utils.emailing.mailing import smtp_send_email, template_email
+from html import escape
 
-
-def send_test_email():
-	subject = "Course schedule remainder. {} to {}"
-	full_names = 'Akimana Jean'
-	email_body_content = "This is a test email"
-	email_body_html = template_email()
-	email_body_plain_text = """
-					<div style="margin-bottom:14pt; margin-top:14pt">Dear """ + full_names + """,</div>
-					<div style="margin-bottom:14pt; margin-top:14pt">""" + email_body_content + """</div>
-							<br />
-							Best regards!<br />D2DStore Team
-						</div>
-					</div>"""
-
-	# fill in blanks
-	email_body_html = email_body_html.replace("[[email_subject]]", subject)
-	email_body_html = email_body_html.replace("[[email_full_names]]", full_names)
-	email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)
-
-	return smtp_send_email(['akimanaja17@gmail.com'], 'Testing email', email_body_plain_text, email_body_html)
-
+from app_utils.emailing.mailing import (
+	render_email, smtp_send_email, email_paragraph, email_code, email_button, email_callout, email_details,
+)
 
 MFA_EVENT_MESSAGES = {
 	'totp_enabled': ('Authenticator app added', 'An authenticator app was added to your account for two-factor authentication.'),
@@ -32,99 +14,88 @@ MFA_EVENT_MESSAGES = {
 }
 
 
+def _full_names(user) -> str:
+	return f'{user.first_name} {user.last_name}'.strip() or user.email
+
+
+def _send(user, subject: str, body_html: str, preheader: str, to_email: str = None, email_subject: str = None):
+	"""Render the branded email for `user` and send it. Returns {has_error, message}."""
+	to_email = to_email or user.email
+	html = render_email(subject, _full_names(user), body_html, email=to_email, preheader=preheader)
+	return smtp_send_email([to_email], email_subject or subject, html)
+
+
+def send_test_email():
+	user_email = 'akimanaja17@gmail.com'
+	subject = 'Test email'
+	body = email_paragraph('This is a test email from D2DStore. If you can read this, email delivery is working.')
+	html = render_email(subject, 'Akimana Jean', body, email=user_email, preheader='Email delivery is working.')
+	return smtp_send_email([user_email], 'Testing email', html)
+
+
 def send_password_reset_code_email(user, code: str, valid_minutes: int):
 	"""Email a password reset code. Returns smtp_send_email's {has_error, message}."""
-	subject = 'Reset your D2DStore password'
-	full_names = f'{user.first_name} {user.last_name}'.strip() or user.email
-	email_body_content = f"""
-		<div style="margin-bottom:14pt">Use this code to reset your password:</div>
-		<div style="font-size:24pt; font-weight:bold; letter-spacing:6px; margin-bottom:14pt">{code}</div>
-		<div style="margin-bottom:14pt">It expires in {valid_minutes} minutes.
-		If you didn't ask to reset your password, you can ignore this email.</div>
-	"""
-	email_body_html = template_email()
-	email_body_html = email_body_html.replace("[[email_subject]]", subject)
-	email_body_html = email_body_html.replace("[[email_full_names]]", full_names)
-	email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)
+	body = (
+		email_paragraph('Use this code to reset your password:')
+		+ email_code(code)
+		+ email_paragraph(f'It expires in <strong>{valid_minutes} minutes</strong>.')
+		+ email_paragraph("If you didn't ask to reset your password, you can ignore this email.", muted=True)
+	)
+	return _send(user, 'Reset your D2DStore password', body, f'Your password reset code is {code}.')
 
-	return smtp_send_email([user.email], subject, email_body_html)
+
+def send_mfa_code_email(user, code: str, valid_minutes: int):
+	"""Email a one-time verification code. Returns smtp_send_email's {has_error, message}."""
+	body = (
+		email_paragraph('Use this code to finish signing in:')
+		+ email_code(code)
+		+ email_paragraph(f'It expires in <strong>{valid_minutes} minutes</strong>.')
+		+ email_paragraph("If you didn't try to sign in, change your password right away.", muted=True)
+	)
+	return _send(user, 'Your D2DStore verification code', body, f'Your verification code is {code}.')
 
 
 def send_mfa_change_email(user, event: str):
 	"""Tell the user about a change to their two-factor settings."""
 	subject, message = MFA_EVENT_MESSAGES[event]
-	full_names = f'{user.first_name} {user.last_name}'.strip() or user.email
-	email_body_content = f"""
-		<div style="margin-bottom:14pt">{message}</div>
-		<div style="margin-bottom:14pt">If this wasn't you, change your password right away
-		and review your security settings.</div>
-	"""
-	email_body_html = template_email()
-	email_body_html = email_body_html.replace("[[email_subject]]", subject)
-	email_body_html = email_body_html.replace("[[email_full_names]]", full_names)
-	email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)
-
-	return smtp_send_email([user.email], f'D2DStore security alert: {subject}', email_body_html)
-
-
-def send_mfa_code_email(user, code: str, valid_minutes: int):
-	"""Email a one-time verification code. Returns smtp_send_email's {has_error, message}."""
-	subject = 'Your D2DStore verification code'
-	full_names = f'{user.first_name} {user.last_name}'.strip() or user.email
-	email_body_content = f"""
-		<div style="margin-bottom:14pt">Use this code to finish signing in:</div>
-		<div style="font-size:24pt; font-weight:bold; letter-spacing:6px; margin-bottom:14pt">{code}</div>
-		<div style="margin-bottom:14pt">It expires in {valid_minutes} minutes.
-		If you didn't try to sign in, change your password.</div>
-	"""
-	email_body_html = template_email()
-	email_body_html = email_body_html.replace("[[email_subject]]", subject)
-	email_body_html = email_body_html.replace("[[email_full_names]]", full_names)
-	email_body_html = email_body_html.replace("[[email_body_content]]", email_body_content)
-
-	return smtp_send_email([user.email], subject, email_body_html)
-
-
-def _render_email(subject: str, full_names: str, email_body_content: str) -> str:
-	email_body_html = template_email()
-	email_body_html = email_body_html.replace("[[email_subject]]", subject)
-	email_body_html = email_body_html.replace("[[email_full_names]]", full_names)
-	return email_body_html.replace("[[email_body_content]]", email_body_content)
-
-
-def _full_names(user) -> str:
-	return f'{user.first_name} {user.last_name}'.strip() or user.email
+	body = (
+		email_paragraph(message)
+		+ email_callout("<strong>Wasn't you?</strong> Change your password right away and review your "
+			"security settings.", tone='warning')
+	)
+	return _send(user, subject, body, message, email_subject=f'D2DStore security alert: {subject}')
 
 
 def send_user_invite_email(user, temp_password: str, login_url: str, valid_days: int):
 	"""Invite a new user with their temporary password. Returns {has_error, message}."""
-	subject = "You've been invited to D2DStore"
-	email_body_content = f"""
-		<div style="margin-bottom:14pt">An account was created for you. Sign in with:</div>
-		<div style="margin-bottom:6pt">Email: <strong>{user.email}</strong></div>
-		<div style="margin-bottom:14pt">Temporary password:
-			<strong style="font-size:16pt; letter-spacing:2px">{temp_password}</strong></div>
-		<div style="margin-bottom:14pt"><a href="{login_url}">Sign in to D2DStore</a></div>
-		<div style="margin-bottom:14pt">You'll be asked to choose your own password when you first
-		sign in. The temporary password expires in {valid_days} days.</div>
-	"""
-	return smtp_send_email([user.email], subject, _render_email(subject, _full_names(user), email_body_content))
+	body = (
+		email_paragraph('An account was created for you on D2DStore. Sign in with these details:')
+		+ email_details([
+			('Email', escape(user.email)),
+			('Temporary password', f'<span style="font-family:Menlo, Consolas, monospace; letter-spacing:1px;">'
+				f'{escape(temp_password)}</span>'),
+		])
+		+ email_button('Sign in to D2DStore', login_url)
+		+ email_paragraph(f"You'll be asked to choose your own password when you first sign in. "
+			f"The temporary password expires in <strong>{valid_days} days</strong>.", muted=True)
+	)
+	return _send(user, "You've been invited to D2DStore", body, 'Your account is ready. Sign in to get started.')
 
 
 def send_account_disabled_email(user):
-	subject = 'Your D2DStore account was disabled'
-	email_body_content = """
-		<div style="margin-bottom:14pt">Your account was disabled by an administrator and you
-		were signed out. Your data is kept. Contact your administrator if you think this is a mistake.</div>
-	"""
-	return smtp_send_email([user.email], subject, _render_email(subject, _full_names(user), email_body_content))
+	body = (
+		email_paragraph('Your account was disabled by an administrator and you were signed out. Your data is kept.')
+		+ email_paragraph('Contact your administrator if you think this is a mistake.', muted=True)
+	)
+	return _send(user, 'Your D2DStore account was disabled', body, 'An administrator disabled your account.')
 
 
 def send_email_changed_email(user, old_email: str):
 	"""Sent to the old address when an administrator changes the account's email."""
-	subject = 'Your D2DStore email address was changed'
-	email_body_content = f"""
-		<div style="margin-bottom:14pt">An administrator changed the email address on your account
-		to <strong>{user.email}</strong>, and you were signed out. Sign in with the new address.</div>
-	"""
-	return smtp_send_email([old_email], subject, _render_email(subject, _full_names(user), email_body_content))
+	body = (
+		email_paragraph('An administrator changed the email address on your account, and you were signed out.')
+		+ email_details([('Old email', escape(old_email)), ('New email', escape(user.email))])
+		+ email_paragraph('Sign in with the new address from now on.', muted=True)
+	)
+	return _send(user, 'Your D2DStore email address was changed', body,
+		'Your account now uses a different email address.', to_email=old_email)

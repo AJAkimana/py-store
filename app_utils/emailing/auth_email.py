@@ -82,6 +82,25 @@ def send_user_invite_email(user, temp_password: str, login_url: str, valid_days:
 	return _send(user, "You've been invited to D2DStore", body, 'Your account is ready. Sign in to get started.')
 
 
+def send_admin_password_reset_email(user, temp_password: str, login_url: str, valid_days: int):
+	"""An administrator reset the user's password; give them a temporary one. Returns {has_error, message}."""
+	body = (
+		email_paragraph('An administrator reset the password on your account, and you were signed out. '
+			'Sign in with this temporary password:')
+		+ email_details([
+			('Email', escape(user.email)),
+			('Temporary password', f'<span style="font-family:Menlo, Consolas, monospace; letter-spacing:1px;">'
+				f'{escape(temp_password)}</span>'),
+		])
+		+ email_button('Sign in to D2DStore', login_url)
+		+ email_paragraph(f"You'll be asked to choose a new password when you sign in. "
+			f"The temporary password expires in <strong>{valid_days} days</strong>.", muted=True)
+		+ email_callout("<strong>Didn't ask for this?</strong> Contact your administrator.", tone='warning')
+	)
+	return _send(user, 'Your D2DStore password was reset', body,
+		'An administrator reset your password. Sign in with your temporary password.')
+
+
 def send_account_disabled_email(user):
 	body = (
 		email_paragraph('Your account was disabled by an administrator and you were signed out. Your data is kept.')

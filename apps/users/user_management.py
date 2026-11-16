@@ -1,11 +1,12 @@
 """
-User management for the administrator: invite (create), update, disable/enable.
+User management for the administrator: invite (create), update, reset password, disable/enable.
 
 There is a single administrator (the superuser). Only regular users are managed here;
 the administrator's own account is managed from Settings and can't be changed here.
 
 New users get an emailed temporary password and must choose their own at first
-sign-in ('password_change_required' on login, then set_initial_password).
+sign-in ('password_change_required' on login, then set_initial_password). An admin
+password reset reuses that flow.
 """
 import re
 import secrets
@@ -22,6 +23,7 @@ from django.utils import timezone
 
 from app_utils.emailing.auth_email import (
 	send_user_invite_email, send_account_disabled_email, send_email_changed_email,
+	send_admin_password_reset_email,
 )
 from app_utils.emailing.background import send_after_commit
 from apps.households.models import Household
@@ -111,7 +113,8 @@ def _new_temp_password() -> str:
 def _issue_invite(user: User) -> bool:
 	"""
 	Give the user a new temporary password and email it. Returns whether the email was
-	sent. Any previous temporary password stops working.
+	sent. Any previous password stops working. Someone who has signed in before gets the
+	password-reset email instead of the invite.
 	"""
 	temp_password = _new_temp_password()
 	now = timezone.now()
@@ -125,7 +128,8 @@ def _issue_invite(user: User) -> bool:
 		# Development only, so invites can be tested without SMTP
 		logger.info(f'[Invite] Temporary password for {user.email}: {temp_password}')
 
-	sent = send_user_invite_email(
+	send_email = send_admin_password_reset_email if user.last_login else send_user_invite_email
+	sent = send_email(
 		user, temp_password, f'{settings.FRONTEND_URL}/login', settings.INVITE_PASSWORD_VALID_DAYS,
 	)
 	if sent['has_error']:
@@ -157,7 +161,10 @@ def create_user(actor: User, **fields) -> tuple:
 
 
 def resend_invite(actor: User, user_id) -> bool:
-	"""New temporary password for a user who hasn't set their own yet. Returns invite_sent."""
+	"""
+	New temporary password for a user who hasn't set their own yet (new, or after an
+	admin password reset). Returns invite_sent.
+	"""
 	_ensure_admin(actor)
 	user = _get_managed_user(user_id)
 	if user.is_verified:
@@ -166,6 +173,24 @@ def resend_invite(actor: User, user_id) -> bool:
 		raise UserManagementError('Enable this user before sending a new invite')
 	if user.invited_at and timezone.now() - user.invited_at < INVITE_RESEND_INTERVAL:
 		raise UserManagementError('An invite was just sent. Wait a minute before sending another')
+	return _issue_invite(user)
+
+
+def reset_user_password(actor: User, user_id) -> bool:
+	"""
+	Replace an active user's password with an emailed temporary one: they're signed out
+	everywhere and must choose a new password at next sign-in (same flow as an invite).
+	Two-factor settings are kept. Returns whether the email was sent.
+	"""
+	_ensure_admin(actor)
+	user = _get_managed_user(user_id)
+	if not user.is_active:
+		raise UserManagementError('Enable this user before resetting their password')
+	if not user.is_verified:
+		raise UserManagementError("This user hasn't set their password yet. Resend the invite instead")
+
+	end_all_sessions(user)
+	# If the email fails the reset still stands; the admin can send a new one with resend_invite
 	return _issue_invite(user)
 
 

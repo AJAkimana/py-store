@@ -658,6 +658,30 @@ class ResendUserInvite(graphene.Mutation):
 		return ResendUserInvite(message=message, user=user_management.User.objects.get(pk=id), invite_sent=invite_sent)
 
 
+class ResetUserPassword(graphene.Mutation):
+	"""
+	Administrator: replace a user's password with an emailed temporary one. They're signed
+	out everywhere and must choose a new password at next sign-in.
+	"""
+	message = graphene.String()
+	user = graphene.Field(ManagedUserType)
+	email_sent = graphene.Boolean(required=True)
+
+	class Arguments:
+		id = graphene.ID(required=True)
+
+	@login_required
+	@superuser_required
+	def mutate(self, info, id):
+		try:
+			email_sent = user_management.reset_user_password(info.context.user, id)
+		except user_management.UserManagementError as error:
+			raise GraphQLError(str(error))
+		message = ('Password reset. A temporary password was emailed.' if email_sent
+			else "Password reset, but the email couldn't be sent. Use 'Resend temporary password'.")
+		return ResetUserPassword(message=message, user=user_management.User.objects.get(pk=id), email_sent=email_sent)
+
+
 class UserMutations(graphene.ObjectType):
 	login_user = LoginUser.Field()
 	verify_mfa_login = VerifyMfaLogin.Field()
@@ -684,3 +708,4 @@ class UserMutations(graphene.ObjectType):
 	update_user = UpdateUser.Field()
 	set_user_active = SetUserActive.Field()
 	resend_user_invite = ResendUserInvite.Field()
+	reset_user_password = ResetUserPassword.Field()

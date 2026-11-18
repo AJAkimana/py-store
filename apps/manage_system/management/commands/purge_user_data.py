@@ -7,15 +7,17 @@ budget items) is never touched.
 Deleted: rows the user owns, plus rows owned by households where they're the only member.
 Data of households shared with other members is kept, since it belongs to them too.
 
-Dry run by default: it only prints what would be deleted.
+Dry run by default: it only prints what would be deleted. With --execute the database is
+always backed up first (dbbackup); if the backup fails nothing is deleted.
 
 	python manage.py purge_user_data --email someone@example.com            # dry run
 	python manage.py purge_user_data --email someone@example.com --execute  # asks you to type DELETE
-	python manage.py purge_user_data --email someone@example.com --execute --backup --no-input
+	python manage.py purge_user_data --email someone@example.com --execute --no-input
 
 Rows are removed for good (hard delete), including ones already soft-deleted.
 """
 from django.apps import apps
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -36,6 +38,14 @@ def _rows(label, condition):
 def _ids(label, condition) -> list:
 	# Frozen up front so dependent rows are still found after their parents are deleted
 	return list(_rows(label, condition).values_list('pk', flat=True))
+
+
+def backup_problem() -> str:
+	"""Why a backup can't work with the current settings, or '' (catches it before asking to confirm)."""
+	if 'dropbox' in str(getattr(settings, 'DBBACKUP_STORAGE', '')).lower():
+		if not getattr(settings, 'DBBACKUP_STORAGE_OPTIONS', {}).get('oauth2_access_token'):
+			return 'DROPBOX_TOKEN is not set, so the required backup would fail'
+	return ''
 
 
 def solo_households(user: User) -> tuple:
@@ -82,7 +92,6 @@ class Command(BaseCommand):
 		parser.add_argument('-e', '--email', required=True, help='Email of the user whose data to delete')
 		parser.add_argument('--execute', action='store_true', help='Actually delete (otherwise dry run)')
 		parser.add_argument('--no-input', action='store_true', help=f"Don't ask to type {CONFIRM_WORD}")
-		parser.add_argument('--backup', action='store_true', help='Run dbbackup first and stop if it fails')
 
 	def handle(self, *args, **options):
 		email = options['email'].strip()
@@ -102,24 +111,31 @@ class Command(BaseCommand):
 			self.stdout.write(f'  {label.ljust(width)}  {count}')
 		self.stdout.write(f'  {"Total".ljust(width)}  {total}')
 
+		problem = backup_problem()
 		if not options['execute']:
-			self.stdout.write(self.style.WARNING('Dry run: nothing was deleted. Add --execute to delete.'))
+			if problem:
+				self.stdout.write(self.style.ERROR(f'--execute would stop: {problem}.'))
+			self.stdout.write(self.style.WARNING(
+				'Dry run: nothing was deleted. Add --execute to back up the database and delete.'))
 			return
 		if total == 0:
 			self.stdout.write(self.style.SUCCESS('Nothing to delete.'))
 			return
+		if problem:
+			raise CommandError(f'{problem}. Nothing was deleted.')
 
 		if not options['no_input']:
-			answer = input(f'This permanently deletes {total} rows of {user.email}. Type {CONFIRM_WORD} to continue: ')
+			answer = input(f'This permanently deletes {total} rows of {user.email} after backing up the database. '
+				f'Type {CONFIRM_WORD} to continue: ')
 			if answer.strip() != CONFIRM_WORD:
 				raise CommandError('Cancelled, nothing was deleted.')
 
-		if options['backup']:
-			self.stdout.write('Backing up the database...')
-			try:
-				call_command('dbbackup')
-			except Exception as error:
-				raise CommandError(f'Backup failed, nothing was deleted: {error}')
+		self.stdout.write('Backing up the database...')
+		try:
+			call_command('dbbackup')
+		except Exception as error:
+			raise CommandError(f'Backup failed, nothing was deleted: {error}')
+		self.stdout.write(self.style.SUCCESS('Backup done.'))
 
 		try:
 			with transaction.atomic():

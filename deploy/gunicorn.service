@@ -1,0 +1,26 @@
+# systemd service for the D2DStore backend, started on demand by gunicorn.socket.
+# Runs from the production venv (~/store/be/.venv), not pipenv.
+# Settings come from ~/store/be/app.env (loaded by d2dstore/settings.py); production needs at least:
+#   DEBUG=false  FORCE_SCRIPT_NAME=/server  FRONTEND_URL=https://store.akimanaja.com
+# Change `deploy` / /home/deploy if the server uses another user.
+[Unit]
+Description=D2DStore gunicorn
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+Type=notify
+User=deploy
+Group=www-data
+WorkingDirectory=/home/deploy/store/be
+ExecStart=/home/deploy/store/be/.venv/bin/gunicorn \
+	--workers 3 \
+	--access-logfile - \
+	d2dstore.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+# systemd socket for the D2DStore backend. nginx proxies /server to this socket.
+#   sudo cp gunicorn.socket gunicorn.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now gunicorn.socket
+[Unit]
+Description=D2DStore gunicorn socket
+
+[Socket]
+ListenStream=/run/gunicorn.sock
+# Only nginx (www-data) needs to connect
+SocketUser=www-data
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

@@ -42,8 +42,9 @@ def _ids(label, condition) -> list:
 
 def backup_problem() -> str:
 	"""Why a backup can't work with the current settings, or '' (catches it before asking to confirm)."""
-	if 'dropbox' in str(getattr(settings, 'DBBACKUP_STORAGE', '')).lower():
-		if not getattr(settings, 'DBBACKUP_STORAGE_OPTIONS', {}).get('oauth2_access_token'):
+	storage = settings.STORAGES.get('dbbackup', {})
+	if 'dropbox' in storage.get('BACKEND', '').lower():
+		if not storage.get('OPTIONS', {}).get('oauth2_access_token'):
 			return 'DROPBOX_TOKEN is not set, so the required backup would fail'
 	return ''
 

@@ -198,7 +198,7 @@ AUTHENTICATION_BACKENDS = [
 	'django.contrib.auth.backends.ModelBackend',
 ]
 AUTH_USER_MODEL = 'users.User'
-CORS_ORIGIN_WHITELIST = env_list(
+CORS_ALLOWED_ORIGINS = env_list(
 	'CORS_ORIGINS',
 	['http://localhost:8000', 'http://localhost:3000'] if DEBUG else [FRONTEND_URL],
 )
@@ -245,11 +245,19 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
 # GeopIP2
 GEOIP_PATH = os.getenv('GEOIP_PATH', '')
 # Backup database
-# DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-DBBACKUP_STORAGE = 'storages.backends.dropbox.DropBoxStorage'
-DBBACKUP_STORAGE_OPTIONS = {
-	'oauth2_access_token': os.getenv('DROPBOX_TOKEN', ''),
-	# 'location': os.getenv('DB_BACKUP_ZONE', None)
+# Setting STORAGES replaces Django's defaults, so 'default' and 'staticfiles' are listed too.
+# 'dbbackup' is where django-dbbackup writes; for local backups use
+# 'django.core.files.storage.FileSystemStorage' with OPTIONS {'location': '<folder>'}.
+STORAGES = {
+	'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+	'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+	'dbbackup': {
+		'BACKEND': 'storages.backends.dropbox.DropboxStorage',
+		'OPTIONS': {
+			'oauth2_access_token': os.getenv('DROPBOX_TOKEN', ''),
+			# 'root_path': os.getenv('DB_BACKUP_ZONE', None)
+		},
+	},
 }
 
 DBBACKUP_FILENAME_TEMPLATE = backup_filename

@@ -6,7 +6,7 @@ from apps.users.models import User, UserSettings, Currency
 class UserType(DjangoObjectType):
 	class Meta:
 		model = User
-		exclude_fields = (
+		exclude = (
 			'password', 'previous_passwords', 'password_changed_at',
 			'invited_at', 'temp_password_expires_at', 'deactivated_at', 'deactivated_by',
 		)
@@ -28,6 +28,7 @@ class PaginatorUserType(graphene.ObjectType):
 class UserSettingsType(DjangoObjectType):
 	class Meta:
 		model = UserSettings
+		fields = '__all__'
 		# Expose theme_mode as a plain 'light' | 'dark' string instead of a generated enum
 		convert_choices_to_enum = False
 
@@ -50,8 +51,9 @@ class UserSettingsType(DjangoObjectType):
 
 
 class CurrencyType(DjangoObjectType):
-		class Meta:
-			model = Currency
+	class Meta:
+		model = Currency
+		fields = '__all__'
 
 
 class MfaStatusType(graphene.ObjectType):

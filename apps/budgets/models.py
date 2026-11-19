@@ -52,7 +52,7 @@ class BudgetItem(BaseModel):
 		ordering = ['name']
 		constraints = [
 			models.CheckConstraint(
-				check=USER_OWNED | HOUSEHOLD_OWNED | NO_OWNER, name='budget_item_at_most_one_owner'),
+				condition=USER_OWNED | HOUSEHOLD_OWNED | NO_OWNER, name='budget_item_at_most_one_owner'),
 			models.UniqueConstraint(
 				Lower('name'), 'user', condition=ALIVE & USER_OWNED,
 				name='budget_item_unique_name_per_user'),
@@ -86,7 +86,7 @@ class ItemActivation(BaseModel):
 		db_table = 'budgets_item_activation'
 		constraints = [
 			models.CheckConstraint(
-				check=USER_OWNED | HOUSEHOLD_OWNED, name='item_activation_single_owner'),
+				condition=USER_OWNED | HOUSEHOLD_OWNED, name='item_activation_single_owner'),
 			models.UniqueConstraint(
 				fields=['item', 'user'], condition=USER_OWNED, name='item_activation_unique_user'),
 			models.UniqueConstraint(
@@ -117,9 +117,9 @@ class Budget(BaseModel):
 		db_table = 'budgets_budget'
 		ordering = ['-start_date']
 		constraints = [
-			models.CheckConstraint(check=USER_OWNED | HOUSEHOLD_OWNED, name='budget_single_owner'),
+			models.CheckConstraint(condition=USER_OWNED | HOUSEHOLD_OWNED, name='budget_single_owner'),
 			models.CheckConstraint(
-				check=Q(end_date__gte=models.F('start_date')), name='budget_end_after_start'),
+				condition=Q(end_date__gte=models.F('start_date')), name='budget_end_after_start'),
 			models.UniqueConstraint(
 				Lower('name'), 'user', condition=ALIVE & USER_OWNED,
 				name='budget_unique_name_per_user'),
@@ -142,7 +142,7 @@ class BudgetAllocation(BaseModel):
 		db_table = 'budgets_allocation'
 		ordering = ['item__name']
 		constraints = [
-			models.CheckConstraint(check=Q(amount__gte=0), name='allocation_amount_not_negative'),
+			models.CheckConstraint(condition=Q(amount__gte=0), name='allocation_amount_not_negative'),
 			models.UniqueConstraint(
 				fields=['budget', 'item'], condition=ALIVE, name='allocation_unique_item_per_budget'),
 		]

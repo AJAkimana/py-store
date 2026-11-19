@@ -92,7 +92,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='itemactivation',
-            constraint=models.CheckConstraint(check=models.Q(models.Q(('household__isnull', True), ('user__isnull', False)), models.Q(('household__isnull', False), ('user__isnull', True)), _connector='OR'), name='item_activation_single_owner'),
+            constraint=models.CheckConstraint(condition=models.Q(models.Q(('household__isnull', True), ('user__isnull', False)), models.Q(('household__isnull', False), ('user__isnull', True)), _connector='OR'), name='item_activation_single_owner'),
         ),
         migrations.AddConstraint(
             model_name='itemactivation',
@@ -104,7 +104,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='budgetitem',
-            constraint=models.CheckConstraint(check=models.Q(models.Q(('household__isnull', True), ('user__isnull', False)), models.Q(('household__isnull', False), ('user__isnull', True)), models.Q(('household__isnull', True), ('user__isnull', True)), _connector='OR'), name='budget_item_at_most_one_owner'),
+            constraint=models.CheckConstraint(condition=models.Q(models.Q(('household__isnull', True), ('user__isnull', False)), models.Q(('household__isnull', False), ('user__isnull', True)), models.Q(('household__isnull', True), ('user__isnull', True)), _connector='OR'), name='budget_item_at_most_one_owner'),
         ),
         migrations.AddConstraint(
             model_name='budgetitem',
@@ -120,7 +120,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='budgetallocation',
-            constraint=models.CheckConstraint(check=models.Q(('amount__gte', 0)), name='allocation_amount_not_negative'),
+            constraint=models.CheckConstraint(condition=models.Q(('amount__gte', 0)), name='allocation_amount_not_negative'),
         ),
         migrations.AddConstraint(
             model_name='budgetallocation',
@@ -128,11 +128,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='budget',
-            constraint=models.CheckConstraint(check=models.Q(models.Q(('household__isnull', True), ('user__isnull', False)), models.Q(('household__isnull', False), ('user__isnull', True)), _connector='OR'), name='budget_single_owner'),
+            constraint=models.CheckConstraint(condition=models.Q(models.Q(('household__isnull', True), ('user__isnull', False)), models.Q(('household__isnull', False), ('user__isnull', True)), _connector='OR'), name='budget_single_owner'),
         ),
         migrations.AddConstraint(
             model_name='budget',
-            constraint=models.CheckConstraint(check=models.Q(('end_date__gte', models.F('start_date'))), name='budget_end_after_start'),
+            constraint=models.CheckConstraint(condition=models.Q(('end_date__gte', models.F('start_date'))), name='budget_end_after_start'),
         ),
         migrations.AddConstraint(
             model_name='budget',

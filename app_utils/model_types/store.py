@@ -21,26 +21,25 @@ class StoreType(DjangoObjectType):
 class RecurringStoreType(DjangoObjectType):
     class Meta:
         model = RecurringStore
+        fields = '__all__'
 
 
 class HouseholdType(DjangoObjectType):
     class Meta:
         model = Household
+        fields = '__all__'
 
 
 class HouseholdMemberType(DjangoObjectType):
     class Meta:
         model = HouseholdMember
+        fields = '__all__'
 
 
 class BehaviorType(DjangoObjectType):
     class Meta:
         model = Behavior
-
-
-class BehaviorType(DjangoObjectType):
-    class Meta:
-        model = Behavior
+        fields = '__all__'
 
 
 class PaginatorType(graphene.ObjectType):
@@ -101,7 +100,7 @@ class FacilityType(graphene.InputObjectType):
 class SalaryType(DjangoObjectType):
     class Meta:
         model = Salary
-    # fields = '__all__'
+        fields = '__all__'
 # gross_salary = graphene.Float()
 # net_salary = graphene.Float()
 # net_pay = graphene.Float()

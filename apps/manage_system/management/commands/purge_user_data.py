@@ -135,7 +135,7 @@ class Command(BaseCommand):
 		try:
 			call_command('dbbackup')
 		except Exception as error:
-			raise CommandError(f'Backup failed, nothing was deleted: {error}')
+			raise CommandError(f'Backup failed, nothing was deleted: {error}') from error
 		self.stdout.write(self.style.SUCCESS('Backup done.'))
 
 		try:
@@ -149,5 +149,5 @@ class Command(BaseCommand):
 			raise CommandError(
 				'Stopped, nothing was deleted: other users\' data still uses some of these rows: '
 				+ ', '.join(blockers)
-			)
+			) from error
 		self.stdout.write(self.style.SUCCESS(f'Done. Deleted {total} rows; the account and households were kept.'))

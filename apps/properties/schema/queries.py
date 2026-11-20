@@ -1,6 +1,5 @@
 import graphene
 from django.db.models import Q
-from apps.properties.models import Property
 from apps.users.models import User
 from app_utils.model_types.property import PropPaginatorType, \
 	PropertyDetailType

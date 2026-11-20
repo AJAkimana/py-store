@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin as BaseModelAdmin
 from django.utils.translation import gettext_lazy as _
 
-from apps.properties.forms import PropertyChangeForm, PropertyCreationForm, property_fields
+from apps.properties.forms import PropertyChangeForm, PropertyCreationForm
 from apps.properties.models import Property
 
 

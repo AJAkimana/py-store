@@ -1,3 +1,4 @@
+# pylint: disable=redefined-builtin  # 'id'/'input' are GraphQL argument names
 from datetime import date
 
 import graphene

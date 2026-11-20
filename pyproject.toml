@@ -15,3 +15,22 @@ ignore = "W191,E101,E111,E114,E115,E116,E117,E12,E13,E501,W503,W504"
 load-plugins = ["pylint_django"]
 django-settings-module = "d2dstore.settings"
 ignore = ["migrations"]
+
+[tool.pylint.format]
+# Same as .editorconfig and autopep8
+indent-string = "\t"
+max-line-length = 100
+
+[tool.pylint."messages control"]
+disable = [
+	# Docstrings are written where they help, not on every Meta class and resolver
+	"missing-module-docstring",
+	"missing-class-docstring",
+	"missing-function-docstring",
+	# Django Meta classes and graphene types/mutations are small classes on deep hierarchies
+	"too-few-public-methods",
+	"too-many-ancestors",
+]
+# Graphene schema modules disable these at the top of the file instead, because there:
+# - resolvers receive the model instance first, not self (no-self-argument, no-member)
+# - 'id' and 'input' are GraphQL argument names, so renaming them changes the API (redefined-builtin)

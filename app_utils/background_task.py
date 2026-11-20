@@ -9,7 +9,7 @@ def backup_filename():
 		print({'message': 'Db backup starting...'})
 		call_command('dbbackup')
 		print({'message': 'Db backed up'})
-	except Exception as error:
+	except Exception as error:  # pylint: disable=broad-exception-caught  # cron job
 		print('Error backing up')
 		print(error)
 
@@ -19,7 +19,7 @@ def send_weekly_summary():
 		print({'message': 'Start sending weekly report...'})
 		call_command('send_transaction_report', "-t", "weekly")
 		print({'message': 'Weekly report Sent...'})
-	except Exception as error:
+	except Exception as error:  # pylint: disable=broad-exception-caught  # cron job
 		print('Error sending summary')
 		print(error)
 
@@ -33,6 +33,6 @@ def send_monthly_summary(is_manual=False):
 			print({'message': 'Start sending monthly report...'})
 			call_command('send_transaction_report', "-t", "monthly")
 			print({'message': 'Monthly report Sent...'})
-		except Exception as error:
+		except Exception as error:  # pylint: disable=broad-exception-caught  # cron job
 			print('Error sending summary')
 			print(error)

@@ -31,7 +31,7 @@ def _send_quietly(challenge: MfaChallenge):
 	try:
 		mfa.send_email_code(challenge)
 	except mfa.MfaError as error:
-		logger.info(f'[Password reset] Code not sent to {challenge.user.email}: {error}')
+		logger.info('[Password reset] Code not sent to %s: %s', challenge.user.email, error)
 
 
 def request_password_reset(email: str) -> str:

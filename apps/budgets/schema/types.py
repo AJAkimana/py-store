@@ -6,6 +6,7 @@ graphene-django would add reverse fields such as `ownedBudgets` to UserType and
 HouseholdType and expose budgets wherever a user or household is shown.
 Money is returned as Float, which is what the UI expects.
 """
+# pylint: disable=no-self-argument  # resolvers get the model instance, not self
 import graphene
 
 from apps.budgets.services import allocations_with_spending, budget_totals

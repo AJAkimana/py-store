@@ -10,97 +10,97 @@ from apps.stores.models import Store, RecurringStore
 
 
 class StoreType(DjangoObjectType):
-    class Meta:
-        model = Store
-        exclude = ('budget_item',)
+	class Meta:
+		model = Store
+		exclude = ('budget_item',)
 
-    item = graphene.Field(BudgetItemType, description='The budget item this expense is for')
-    budget = graphene.Field(BudgetType, description='The budget this expense counts toward')
+	item = graphene.Field(BudgetItemType, description='The budget item this expense is for')
+	budget = graphene.Field(BudgetType, description='The budget this expense counts toward')
 
 
 class RecurringStoreType(DjangoObjectType):
-    class Meta:
-        model = RecurringStore
-        fields = '__all__'
+	class Meta:
+		model = RecurringStore
+		fields = '__all__'
 
 
 class HouseholdType(DjangoObjectType):
-    class Meta:
-        model = Household
-        fields = '__all__'
+	class Meta:
+		model = Household
+		fields = '__all__'
 
 
 class HouseholdMemberType(DjangoObjectType):
-    class Meta:
-        model = HouseholdMember
-        fields = '__all__'
+	class Meta:
+		model = HouseholdMember
+		fields = '__all__'
 
 
 class BehaviorType(DjangoObjectType):
-    class Meta:
-        model = Behavior
-        fields = '__all__'
+	class Meta:
+		model = Behavior
+		fields = '__all__'
 
 
 class PaginatorType(graphene.ObjectType):
-    num_pages = graphene.Int()
-    total_count = graphene.Int()
+	num_pages = graphene.Int()
+	total_count = graphene.Int()
 
 
 class AggregatedInOutFlow(graphene.ObjectType):
-    inflow = graphene.Float()
-    outflow = graphene.Float()
-    diff = graphene.Float()
+	inflow = graphene.Float()
+	outflow = graphene.Float()
+	diff = graphene.Float()
 
 
 class StoreInputType(graphene.InputObjectType):
-    amount = graphene.Float()
-    record_type = graphene.String()
-    is_property = graphene.Boolean()
-    is_inflow = graphene.Boolean()
-    action_date = graphene.Date()
-    description = graphene.String()
+	amount = graphene.Float()
+	record_type = graphene.String()
+	is_property = graphene.Boolean()
+	is_inflow = graphene.Boolean()
+	action_date = graphene.Date()
+	description = graphene.String()
 
 
 class StorePaginatorType(PaginatorType):
-    page_data = graphene.List(StoreType)
-    aggregate = graphene.Field(AggregatedInOutFlow)
+	page_data = graphene.List(StoreType)
+	aggregate = graphene.Field(AggregatedInOutFlow)
 
 
 class RecurringStorePaginatorType(PaginatorType):
-    page_data = graphene.List(RecurringStoreType)
+	page_data = graphene.List(RecurringStoreType)
 
 
 class BehaviorPaginatorType(PaginatorType):
-    page_data = graphene.List(BehaviorType)
+	page_data = graphene.List(BehaviorType)
 
 
 class HouseholdPaginatorType(PaginatorType):
-    page_data = graphene.List(HouseholdType)
+	page_data = graphene.List(HouseholdType)
 
 
 class MonthType(graphene.ObjectType):
-    label = graphene.String()
-    value = graphene.Int()
+	label = graphene.String()
+	value = graphene.Int()
 
 
 class StoreRatioType(graphene.ObjectType):
-    inflow = graphene.Int()
-    outflow = graphene.Int()
-    percent = graphene.Float()
+	inflow = graphene.Int()
+	outflow = graphene.Int()
+	percent = graphene.Float()
 
 
 class FacilityType(graphene.InputObjectType):
-    is_constant = graphene.Boolean()
-    amount = graphene.Float()
-    percent_amount = graphene.Float()
-    percent_field = graphene.String()
+	is_constant = graphene.Boolean()
+	amount = graphene.Float()
+	percent_amount = graphene.Float()
+	percent_field = graphene.String()
 
 
 class SalaryType(DjangoObjectType):
-    class Meta:
-        model = Salary
-        fields = '__all__'
+	class Meta:
+		model = Salary
+		fields = '__all__'
 # gross_salary = graphene.Float()
 # net_salary = graphene.Float()
 # net_pay = graphene.Float()
@@ -111,4 +111,4 @@ class SalaryType(DjangoObjectType):
 
 
 class SalaryPaginatorType(PaginatorType):
-    page_data = graphene.List(SalaryType)
+	page_data = graphene.List(SalaryType)

@@ -1,6 +1,5 @@
-import re
 import uuid
-from django.db import models, IntegrityError, DatabaseError, OperationalError
+from django.db import models
 from django.utils import timezone
 
 # from app_utils.error_handler import errors

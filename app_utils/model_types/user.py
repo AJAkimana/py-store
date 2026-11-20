@@ -1,3 +1,4 @@
+# pylint: disable=no-self-argument,no-member  # resolvers get the model instance, not self
 import graphene
 from graphene_django import DjangoObjectType
 from apps.users.models import User, UserSettings, Currency

@@ -1,5 +1,6 @@
+# pylint: disable=redefined-builtin  # 'id'/'input' are GraphQL argument names
 import graphene
-from django.contrib.auth import authenticate, logout
+from django.contrib.auth import authenticate
 from graphql_jwt.decorators import login_required, superuser_required
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import ValidationError
@@ -76,7 +77,7 @@ to 'setInitialPassword', after which the client signs in with the new password.
 			try:
 				challenge = mfa.start_login_challenge(user_auth)
 			except mfa.MfaError as error:
-				raise GraphQLError(str(error))
+				raise GraphQLError(str(error)) from error
 			# No user details until the second factor passes
 			return LoginUser(
 				message='Enter your verification code',
@@ -111,7 +112,7 @@ class VerifyMfaLogin(graphene.Mutation):
 		try:
 			user = mfa.verify_login(mfa_token, method, code)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		if not user.is_active:
 			raise GraphQLError('Invalid credentials')
 
@@ -139,7 +140,7 @@ The refresh token is rotated: the old one is revoked and a new cookie is set.
 			old_refresh_token = get_refresh_token(cookie_token, context)
 		except JSONWebTokenError:
 			context.delete_refresh_token_cookie = True
-			raise GraphQLError('Invalid refresh token')
+			raise GraphQLError('Invalid refresh token') from None
 
 		if old_refresh_token.is_expired(context):
 			old_refresh_token.revoke(context)
@@ -279,7 +280,7 @@ class ConfigureUserSettings(graphene.Mutation):
 			])
 		except ValidationError as error:
 			messages = [f"{field}: {' '.join(errors)}" for field, errors in error.message_dict.items()]
-			raise GraphQLError('; '.join(messages))
+			raise GraphQLError('; '.join(messages)) from error
 
 		user.settings.save()
 		return ConfigureUserSettings(message='Settings updated successfully')
@@ -304,7 +305,7 @@ class StartTotpSetup(graphene.Mutation):
 		try:
 			setup = mfa.start_totp_setup(user)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return StartTotpSetup(setup=TotpSetupType(**setup))
 
 
@@ -326,7 +327,7 @@ class ConfirmTotpSetup(graphene.Mutation):
 		try:
 			recovery_codes = mfa.confirm_totp_setup(user, code)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return ConfirmTotpSetup(
 			message='Authenticator app turned on',
 			recovery_codes=recovery_codes,
@@ -348,7 +349,7 @@ class StartEmailOtpSetup(graphene.Mutation):
 		try:
 			setup_token = mfa.start_email_setup(info.context.user)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return StartEmailOtpSetup(message='We sent a code to your email', setup_token=setup_token)
 
 
@@ -363,7 +364,7 @@ class ResendEmailOtpSetupCode(graphene.Mutation):
 		try:
 			mfa.resend_email_setup_code(info.context.user, setup_token)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return ResendEmailOtpSetupCode(message='We sent a new code')
 
 
@@ -383,7 +384,7 @@ class ConfirmEmailOtpSetup(graphene.Mutation):
 		try:
 			recovery_codes = mfa.confirm_email_setup(user, setup_token, code)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return ConfirmEmailOtpSetup(
 			message='Email codes turned on',
 			recovery_codes=recovery_codes,
@@ -405,7 +406,7 @@ class SetPreferredMfaMethod(graphene.Mutation):
 		try:
 			mfa.set_preferred_method(user, method)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return SetPreferredMfaMethod(message='Default method updated', status=MfaStatusType(**mfa.get_mfa_status(user)))
 
 
@@ -423,7 +424,7 @@ class ResendMfaEmailCode(graphene.Mutation):
 		try:
 			mfa.resend_login_email_code(mfa_token)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return ResendMfaEmailCode(message='We sent a code to your email')
 
 
@@ -447,7 +448,7 @@ class SendMfaActionEmailCode(graphene.Mutation):
 			else:
 				action_token = mfa.start_sensitive_email_challenge(user)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return SendMfaActionEmailCode(message='We sent a code to your email', action_token=action_token)
 
 
@@ -472,7 +473,7 @@ class DisableMfa(graphene.Mutation):
 		try:
 			mfa.disable_mfa_checked(user, password, method, code, action_token)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		revoke_refresh_tokens(user, keep_token=current_refresh_token(info))
 		return DisableMfa(
 			message='Two-factor authentication turned off',
@@ -497,7 +498,7 @@ class RegenerateRecoveryCodes(graphene.Mutation):
 		try:
 			recovery_codes = mfa.regenerate_recovery_codes_checked(user, method, code, action_token)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return RegenerateRecoveryCodes(
 			message='New recovery codes created',
 			recovery_codes=recovery_codes,
@@ -539,7 +540,7 @@ class ResetPasswordWithCode(graphene.Mutation):
 		try:
 			password_reset.reset_password_with_code(reset_token, code, new_password)
 		except mfa.MfaError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		# This device is signed out too: clear its refresh cookie
 		info.context.delete_refresh_token_cookie = True
 		return ResetPasswordWithCode(message='Your password was reset. Sign in with your new password.')
@@ -560,7 +561,7 @@ class SetInitialPassword(graphene.Mutation):
 		try:
 			user_management.set_initial_password(password_change_token, new_password)
 		except user_management.UserManagementError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return SetInitialPassword(message='Password set')
 
 
@@ -590,7 +591,7 @@ class CreateUser(graphene.Mutation):
 		try:
 			user, invite_sent = user_management.create_user(info.context.user, **input)
 		except user_management.UserManagementError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		message = 'User created and invited' if invite_sent else \
 			"User created, but the invite email couldn't be sent. Try resending it."
 		return CreateUser(message=message, user=user, invite_sent=invite_sent)
@@ -615,7 +616,7 @@ class UpdateUser(graphene.Mutation):
 		try:
 			user, invite_sent = user_management.update_user(info.context.user, id, **input)
 		except user_management.UserManagementError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return UpdateUser(message='User updated', user=user, invite_sent=invite_sent)
 
 
@@ -634,7 +635,7 @@ class SetUserActive(graphene.Mutation):
 		try:
 			user = user_management.set_user_active(info.context.user, id, active)
 		except user_management.UserManagementError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		return SetUserActive(message='User enabled' if active else 'User disabled', user=user)
 
 
@@ -653,7 +654,7 @@ class ResendUserInvite(graphene.Mutation):
 		try:
 			invite_sent = user_management.resend_invite(info.context.user, id)
 		except user_management.UserManagementError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		message = 'Invite sent' if invite_sent else "The invite email couldn't be sent. Try again later."
 		return ResendUserInvite(message=message, user=user_management.User.objects.get(pk=id), invite_sent=invite_sent)
 
@@ -676,7 +677,7 @@ class ResetUserPassword(graphene.Mutation):
 		try:
 			email_sent = user_management.reset_user_password(info.context.user, id)
 		except user_management.UserManagementError as error:
-			raise GraphQLError(str(error))
+			raise GraphQLError(str(error)) from error
 		message = ('Password reset. A temporary password was emailed.' if email_sent
 			else "Password reset, but the email couldn't be sent. Use 'Resend temporary password'.")
 		return ResetUserPassword(message=message, user=user_management.User.objects.get(pk=id), email_sent=email_sent)

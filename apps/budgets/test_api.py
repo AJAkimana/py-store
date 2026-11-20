@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from django.test import TestCase
 
-from apps.budgets.models import Budget, BudgetItem, BudgetStatus, ItemActivation
+from apps.budgets.models import Budget, BudgetItem, ItemActivation
 from apps.budgets.tests import make_store, make_user
 from apps.household_members.models import HouseholdMember
 from apps.households.models import Household

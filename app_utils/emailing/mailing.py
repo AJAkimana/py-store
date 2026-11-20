@@ -45,7 +45,7 @@ def smtp_send_email(to_emails: [str], subject: str, body_html: str, attachments=
 		message.send(fail_silently=False)
 		response["has_error"] = False
 		response["message"] = "Successfully sent"
-	except Exception as x:
+	except Exception as x:  # pylint: disable=broad-exception-caught  # callers check has_error
 		response["message"] = "Failed to send email error:" + str(x)
 	return response
 
@@ -248,8 +248,8 @@ def write_email_file(title, content):
 	"""Write rendered HTML to <title>.html, handy for previewing a template in a browser."""
 	try:
 		file_name = f"{title}.html"
-		with open(file_name, "w") as file:
+		with open(file_name, "w", encoding="utf-8") as file:
 			file.write(content)
 		print(f"Content written to {file_name} successfully!")
-	except Exception as e:
+	except OSError as e:
 		print(f"An error occurred: {e}")

@@ -83,7 +83,7 @@ def _clean_fields(fields: dict, user: User = None) -> dict:
 		try:
 			validate_email(cleaned['email'])
 		except ValidationError:
-			raise UserManagementError('Enter a valid email address')
+			raise UserManagementError('Enter a valid email address') from None
 	if 'user_name' in cleaned and not _USER_NAME_PATTERN.match(cleaned['user_name']):
 		raise UserManagementError('The user name must be 3-50 letters, numbers, dots, dashes or underscores')
 	if 'phone' in cleaned and not _PHONE_PATTERN.match(cleaned['phone']):
@@ -126,14 +126,14 @@ def _issue_invite(user: User) -> bool:
 
 	if settings.DEBUG:
 		# Development only, so invites can be tested without SMTP
-		logger.info(f'[Invite] Temporary password for {user.email}: {temp_password}')
+		logger.info('[Invite] Temporary password for %s: %s', user.email, temp_password)
 
 	send_email = send_admin_password_reset_email if user.last_login else send_user_invite_email
 	sent = send_email(
 		user, temp_password, f'{settings.FRONTEND_URL}/login', settings.INVITE_PASSWORD_VALID_DAYS,
 	)
 	if sent['has_error']:
-		logger.warning(f'[Invite] Email to {user.email} failed: {sent["message"]}')
+		logger.warning('[Invite] Email to %s failed: %s', user.email, sent['message'])
 		return False
 	return True
 
@@ -287,7 +287,7 @@ def set_initial_password(token: str, new_password: str) -> User:
 		data = signing.loads(token or '', salt=_PASSWORD_CHANGE_SALT,
 												 max_age=PASSWORD_CHANGE_TOKEN_TTL.total_seconds())
 	except signing.BadSignature:
-		raise invalid
+		raise invalid from None
 
 	user = User.objects.filter(pk=data.get('u'), is_active=True, is_verified=False).first()
 	if user is None or data.get('p') != _password_fingerprint(user) or temp_password_expired(user):
@@ -297,7 +297,7 @@ def set_initial_password(token: str, new_password: str) -> User:
 	try:
 		validate_password(new_password or '', user)
 	except ValidationError as error:
-		raise UserManagementError(' '.join(error.messages))
+		raise UserManagementError(' '.join(error.messages)) from error
 
 	user.set_password(new_password)
 	user.is_verified = True

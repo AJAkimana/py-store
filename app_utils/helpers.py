@@ -130,7 +130,7 @@ def calculate_gross_salary(net_salary=0):
 	return gross_salary
 
 
-def get_aggregated_in_out(stores=[]):
+def get_aggregated_in_out(stores=()):
 	inflow = 0
 	outflow = 0
 	for store in stores:

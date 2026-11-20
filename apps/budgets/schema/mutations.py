@@ -1,3 +1,4 @@
+# pylint: disable=redefined-builtin  # 'id'/'input' are GraphQL argument names
 import graphene
 from django.db import transaction
 from graphql import GraphQLError

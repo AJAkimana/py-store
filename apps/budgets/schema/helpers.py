@@ -41,7 +41,7 @@ def to_money(value, label='amount') -> Decimal:
 	try:
 		amount = Decimal(str(value)).quantize(Decimal('0.01'))
 	except (InvalidOperation, TypeError, ValueError):
-		raise GraphQLError(f'Invalid {label}')
+		raise GraphQLError(f'Invalid {label}') from None
 	if amount < 0:
 		raise GraphQLError(f"The {label} can't be negative")
 	return amount

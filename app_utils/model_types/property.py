@@ -1,7 +1,7 @@
+# pylint: disable=no-member  # resolvers get the model instance, not self
 import graphene
 from graphene_django import DjangoObjectType
 from apps.properties.models import Property, PropDetail
-from apps.stores.models import Store
 
 
 class DetailType(DjangoObjectType):

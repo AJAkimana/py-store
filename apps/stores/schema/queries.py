@@ -1,3 +1,4 @@
+# pylint: disable=redefined-builtin  # 'id'/'input' are GraphQL argument names
 import graphene
 from django.db import connection
 from django.db.models import Q
@@ -107,7 +108,7 @@ class StoreQuery(graphene.ObjectType):
 			ORDER BY {custom_column} DESC;
 			"""
 		mysql_query = \
-			f"""
+			"""
 			SELECT 'D2DStore' AS project;
 			"""
 		query = pg_query if connection.vendor == 'postgresql' else mysql_query

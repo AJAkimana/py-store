@@ -15,8 +15,8 @@ def send_after_commit(send, *args, description: str = 'email'):
 		try:
 			result = send(*args)
 			if result and result.get('has_error'):
-				logger.warning(f'Could not send {description}: {result.get("message")}')
-		except Exception as error:  # never let an email break the request
-			logger.warning(f'Could not send {description}: {error}')
+				logger.warning('Could not send %s: %s', description, result.get('message'))
+		except Exception as error:  # pylint: disable=broad-exception-caught  # never let an email break the request
+			logger.warning('Could not send %s: %s', description, error)
 
 	transaction.on_commit(lambda: threading.Thread(target=run, daemon=True).start())

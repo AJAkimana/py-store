@@ -268,7 +268,7 @@ def load_challenge(token: str, purpose: str, user: User = None) -> MfaChallenge:
 			token or '', max_age=CHALLENGE_TTL,
 		)
 	except signing.BadSignature:
-		raise MfaError(INVALID_CODE_MESSAGE)
+		raise MfaError(INVALID_CODE_MESSAGE) from None
 
 	challenge = MfaChallenge.objects.select_related('user').filter(id=challenge_id, purpose=purpose).first()
 	if (
@@ -313,14 +313,14 @@ def send_email_code(challenge: MfaChallenge):
 
 	if settings.DEBUG:
 		# Development only, so the flow works without SMTP. Never runs with DEBUG off
-		logger.info(f'[MFA] Email code for {challenge.user.email}: {code}')
+		logger.info('[MFA] Email code for %s: %s', challenge.user.email, code)
 
 	send = send_password_reset_code_email if challenge.purpose == MfaChallengePurpose.PASSWORD_RESET \
 		else send_mfa_code_email
 	sent = send(challenge.user, code, int(CHALLENGE_TTL.total_seconds() // 60))
 	if sent['has_error']:
 		if settings.DEBUG:
-			logger.warning(f'[MFA] Email not sent ({sent["message"]}); use the code logged above')
+			logger.warning('[MFA] Email not sent (%s); use the code logged above', sent['message'])
 			return
 		raise MfaError('We could not send the verification email. Try again or use another method.')
 
@@ -578,9 +578,9 @@ def notify_mfa_change(user: User, event: str):
 		try:
 			result = send_mfa_change_email(user, event)
 			if result['has_error']:
-				logger.warning(f'[MFA] Could not send "{event}" alert to {user.email}: {result["message"]}')
-		except Exception as error:  # never let an alert break the request
-			logger.warning(f'[MFA] Could not send "{event}" alert to {user.email}: {error}')
+				logger.warning('[MFA] Could not send "%s" alert to %s: %s', event, user.email, result['message'])
+		except Exception as error:  # pylint: disable=broad-exception-caught  # never let an alert break the request
+			logger.warning('[MFA] Could not send "%s" alert to %s: %s', event, user.email, error)
 
 	transaction.on_commit(lambda: threading.Thread(target=send, daemon=True).start())
 

@@ -1,13 +1,12 @@
 import graphene
 from graphql_jwt.decorators import login_required, \
 	superuser_required
-from django.db.models import Q
 from app_utils.model_types.user import UserType, \
 	PaginatorManagedUserType, WelcomeType, UserSettingsType, CurrencyType, MfaStatusType
 from app_utils.helpers import PAGINATION_DEFAULT, paginate_data
 from apps.users.mfa import get_mfa_status
 from apps.users.user_management import filter_managed_users
-from apps.users.models import User, Currency, UserSettings, ThemeMode, \
+from apps.users.models import Currency, UserSettings, ThemeMode, \
 	DEFAULT_PRIMARY_COLOR, DEFAULT_SECONDARY_COLOR
 
 

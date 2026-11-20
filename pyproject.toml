@@ -2,15 +2,18 @@
 # Run: pipenv run format        Check (CI): pipenv run format-check
 [tool.autopep8]
 max_line_length = 100
-recursive = true
+# No 'recursive = true' here: it makes autopep8 refuse stdin, which is how VS Code formats.
+# The Pipfile scripts pass --recursive instead.
 exclude = "*/migrations/*,.venv,venv,django_static"
 # The code base is indented with tabs (see .editorconfig), so leave indentation rules alone:
 # W191 tabs, E101 mixed indentation, E11x/E12x/E13x indent width and continuation lines.
 # E501 too: autopep8 wraps long lines with spaces, which mixes tabs and spaces.
 ignore = "W191,E101,E111,E114,E115,E116,E117,E12,E13,E501,W503,W504"
 
-# Linter settings. Run: pipenv run pylint apps app_utils d2dstore api
+# Linter settings. Run: pipenv run lint
 [tool.pylint.main]
+# The run fails below this score, so it can only go up. Raise it as warnings get fixed.
+fail-under = 9.3
 # Teaches pylint about Django (model fields, managers, DoesNotExist, ...)
 load-plugins = ["pylint_django"]
 django-settings-module = "d2dstore.settings"

@@ -38,12 +38,11 @@ class SaveContextManager:
 		self.error = kwargs.get('error', None)
 
 	def __enter__(self):
-		soft_deleted = True
-		while soft_deleted:
+		# Retries after renaming a soft-deleted row that holds the unique value; every error path raises
+		while True:
 			try:
 				with transaction.atomic():
 					self.model_instance.save()
-					soft_deleted = False
 				return self.model_instance
 			except IntegrityError as e:
 				if self.field is None and self.value is None:

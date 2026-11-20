@@ -15,8 +15,9 @@ migrate = "python manage.py migrate"
 manage = "python manage.py"
 collectstatic = "python manage.py collectstatic --noinput"
 createsuperuser = "python manage.py createsuperuser"
-format = "autopep8 --in-place ."
-format-check = "autopep8 --diff --exit-code ."
+format = "autopep8 --in-place --recursive ."
+format-check = "autopep8 --diff --exit-code --recursive ."
+lint = "pylint apps app_utils d2dstore api"
 graphql-schema = "python manage.py graphql_schema --schema d2dstore.schema.schema --out schema.graphql"
 
 [packages]

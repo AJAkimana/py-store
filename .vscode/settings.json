@@ -1,5 +1,9 @@
 {
+	// Used when the api/ folder is opened on its own; ../.vscode covers the whole repo.
+	// Formatter and linter read their rules from pyproject.toml, the same ones
+	// 'pipenv run format-check' and 'pipenv run lint' use.
 	"python.defaultInterpreterPath": "~/.local/share/virtualenvs/api-mv3wZfgb/bin/python",
+	"python-envs.defaultEnvManager": "ms-python.python:pipenv",
 	"files.eol": "\n",
 	"files.insertFinalNewline": true,
 	"files.encoding": "utf8",
@@ -7,18 +11,20 @@
 	"editor.detectIndentation": false,
 	"editor.tabSize": 2,
 	"editor.insertSpaces": false,
-	"python.formatting.provider": "autopep8",
-	"python.formatting.autopep8Args": [
-		"--max-line-length",
-		"100"
-	],
-	"editor.formatOnSave": true,
 	"[python]": {
+		"editor.defaultFormatter": "ms-python.autopep8",
+		"editor.formatOnSave": true,
 		"editor.insertSpaces": false,
-		"editor.tabSize": 2
+		"editor.tabSize": 2,
+		"editor.rulers": [100]
 	},
 	"[markdown]": {
 		"files.trimTrailingWhitespace": false
 	},
-	"python-envs.defaultEnvManager": "ms-python.python:pipenv"
+	// Use the project's pinned autopep8/pylint (+ pylint-django) from the pipenv venv
+	"autopep8.importStrategy": "fromEnvironment",
+	"autopep8.cwd": "${workspaceFolder}",
+	"pylint.importStrategy": "fromEnvironment",
+	"pylint.cwd": "${workspaceFolder}",
+	"pylint.args": ["--rcfile=${workspaceFolder}/pyproject.toml"]
 }

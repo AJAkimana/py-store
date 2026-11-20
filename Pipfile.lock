@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "9b89d06570314914d048ace14415c34c4edda418f72ffb0d805f48cc332ab7a3"
+            "sha256": "c9fb8085464d655e2a62ff2855f09d281b1993fbf361802cf7f5257f98f820b8"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1843,11 +1843,11 @@
         },
         "platformdirs": {
             "hashes": [
-                "sha256:391513b74707c42335fff3ea17eaac657a7ee9ffcadd809634d34ea594d0122c",
-                "sha256:5472257c1cf97a14658af52997011c7e59e4aebf3a24950b973c11b579e1b074"
+                "sha256:1e34af590de4d978631b751eb2202f2fee4497537a17c1720b12fcf57b331392",
+                "sha256:96893d686e84e9e6f358a9ea41a8de544df66dbf2ba6cda250e7dc73acf85b9b"
             ],
             "markers": "python_version >= '3.11'",
-            "version": "==4.14.7"
+            "version": "==4.14.8"
         },
         "pycodestyle": {
             "hashes": [
@@ -1865,6 +1865,23 @@
             "index": "pypi",
             "markers": "python_full_version >= '3.10.0'",
             "version": "==4.1.4"
+        },
+        "pylint-django": {
+            "hashes": [
+                "sha256:42accea9098e4a3298b4bfbae0e4da81f909f8bff0deda9485efbd6035a86d6a",
+                "sha256:706eb2cc8d7692236be9fd033a341042afe3bbbf99df9234a659db931016ef5d"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.9' and python_version < '4.0'",
+            "version": "==2.8.0"
+        },
+        "pylint-plugin-utils": {
+            "hashes": [
+                "sha256:16e9b84e5326ba893a319a0323fcc8b4bcc9c71fc654fcabba0605596c673818",
+                "sha256:5468d763878a18d5cc4db46eaffdda14313b043c962a263a7d78151b90132055"
+            ],
+            "markers": "python_version >= '3.9' and python_version < '4.0'",
+            "version": "==0.9.0"
         },
         "tokenize-rt": {
             "hashes": [

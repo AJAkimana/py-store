@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "==4.1.4"
+pylint-django = "==2.8.0"
 autopep8 = "==2.3.2"
 django-upgrade = "==1.33.0"
 

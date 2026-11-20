@@ -170,7 +170,6 @@ REST_FRAMEWORK = {
 	],
 }
 GRAPHQL_JWT = {
-	'JWT_ALLOW_ANY_HANDLER': 'app_utils.helpers.jwt_allow_allow_any',
 	'JWT_VERIFY_EXPIRATION': True,
 	'JWT_EXPIRATION_DELTA': timedelta(minutes=15),
 	'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
